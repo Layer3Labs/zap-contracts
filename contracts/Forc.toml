@@ -1,0 +1,5 @@
+[workspace]
+members = [
+  "nonce_manager",
+  "wallet_predicate",
+]

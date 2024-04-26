@@ -1,0 +1,26 @@
+[[package]]
+name = "core"
+source = "path+from-root-B672DC9E3D340CD2"
+
+[[package]]
+name = "nonce_manager"
+source = "member"
+dependencies = [
+    "nonce_manager_abi",
+    "std",
+]
+
+[[package]]
+name = "nonce_manager_abi"
+source = "path+from-root-D818697163A29DA2"
+dependencies = ["std"]
+
+[[package]]
+name = "std"
+source = "git+https://github.com/fuellabs/sway?tag=v0.49.2#a70c746d27b3300beef896ccd1dcce1299836192"
+dependencies = ["core"]
+
+[[package]]
+name = "wallet_predicate"
+source = "member"
+dependencies = ["std"]
