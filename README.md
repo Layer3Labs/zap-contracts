@@ -14,7 +14,7 @@
 
 ## Compilation:
 
-compile with `forc` version 0.49.2
+Compile with `forc` version 0.49.2
 
 ```console
 cd ./contracts
@@ -23,6 +23,7 @@ forc build
 
 ## Fuel network compatibility:
 
+Beta-5 Compatibility.
 
 ```
 ########################################################################################
