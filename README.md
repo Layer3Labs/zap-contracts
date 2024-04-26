@@ -4,8 +4,8 @@
 
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/CatspersCoffee/zap-executor/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="338">
-  <img alt="title image light / dark." src="https://github.com/CatspersCoffee/zap-executor/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="338">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="338">
+  <img alt="title image light / dark." src="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="338">
 </picture>
 </p>
 
