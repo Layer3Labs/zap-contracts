@@ -6,6 +6,9 @@ predicate;
 //  development v.00.01.04
 //  forc version: 0.49.2
 //
+// predicate root  : 5f50d15b64d1f6e77e981edf8197b83d33c5bc664b861d5b96c571d7b6bd163c
+// sha256(bytecode): 28a671578ceed6c30f58f0210fa54e62b068b9dd9b2f56b2f9550a068c2c6fb7
+//
 
 mod transaction_utils;
 mod rlp_utils5;
