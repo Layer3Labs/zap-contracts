@@ -1,5 +1,13 @@
 [workspace]
 members = [
-  "nonce_manager",
-  "wallet_predicate",
+  "module_evm_txtype1",
+  "module_evm_txtype2",
+  "module_erc20",
+  "module_eip712",
+  "module_upgrade",
+  "module_sponsor",
+  "module_txidwit",
+  "master",
+  "zap_manager",
+  "tests_txtypes",
 ]

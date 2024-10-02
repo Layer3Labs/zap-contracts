@@ -1,0 +1,9 @@
+[project]
+authors = ["0xbadc0de <0xbadc0de@l3labs.org>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "zap_manager"
+
+[dependencies]
+zap_manager_abi = { path = "../zap_manager_abi/", package = "zap_manager_abi" }
+ptools = { path = "../ptools" }

@@ -1,0 +1,35 @@
+[[package]]
+name = "core"
+source = "path+from-root-D19F39D92CA9923C"
+
+[[package]]
+name = "helpers"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = ["std"]
+
+[[package]]
+name = "master"
+source = "member"
+dependencies = [
+    "ptools",
+    "std",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "ptools"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = [
+    "helpers",
+    "std",
+]
+
+[[package]]
+name = "std"
+source = "git+https://github.com/fuellabs/sway?tag=v0.63.1#169f91ae0a6a698bd1cb459c4c203bab646a38ec"
+dependencies = ["core"]
+
+[[package]]
+name = "zapwallet_consts"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = ["std"]

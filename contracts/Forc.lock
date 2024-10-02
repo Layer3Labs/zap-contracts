@@ -1,26 +1,115 @@
 [[package]]
 name = "core"
-source = "path+from-root-B672DC9E3D340CD2"
+source = "path+from-root-EF1196EF955CE54B"
 
 [[package]]
-name = "nonce_manager"
+name = "helpers"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = ["std"]
+
+[[package]]
+name = "master"
 source = "member"
 dependencies = [
-    "nonce_manager_abi",
+    "ptools",
+    "std",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "module_eip712"
+source = "member"
+dependencies = [
+    "helpers",
     "std",
 ]
 
 [[package]]
-name = "nonce_manager_abi"
-source = "path+from-root-D818697163A29DA2"
-dependencies = ["std"]
+name = "module_erc20"
+source = "member"
+dependencies = [
+    "helpers",
+    "std",
+]
+
+[[package]]
+name = "module_evm_txtype1"
+source = "member"
+dependencies = [
+    "helpers",
+    "std",
+]
+
+[[package]]
+name = "module_evm_txtype2"
+source = "member"
+dependencies = [
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "module_sponsor"
+source = "member"
+dependencies = [
+    "helpers",
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "module_txidwit"
+source = "member"
+dependencies = [
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "module_upgrade"
+source = "member"
+dependencies = [
+    "helpers",
+    "std",
+]
+
+[[package]]
+name = "ptools"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = [
+    "helpers",
+    "std",
+]
 
 [[package]]
 name = "std"
-source = "git+https://github.com/fuellabs/sway?tag=v0.49.2#a70c746d27b3300beef896ccd1dcce1299836192"
+source = "git+https://github.com/fuellabs/sway?tag=v0.63.3#f55c81cce61aac31913ac0e87306cbaed7da679a"
 dependencies = ["core"]
 
 [[package]]
-name = "wallet_predicate"
+name = "tests_txtypes"
 source = "member"
+dependencies = [
+    "helpers",
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "zap_manager"
+source = "member"
+dependencies = [
+    "ptools",
+    "std",
+    "zap_manager_abi",
+]
+
+[[package]]
+name = "zap_manager_abi"
+source = "path+from-root-B15D36EEC8A488B1"
+dependencies = ["std"]
+
+[[package]]
+name = "zapwallet_consts"
+source = "path+from-root-B2FDB073770A0553"
 dependencies = ["std"]
