@@ -1,5 +1,5 @@
 [project]
-authors = ["0xbadc0de <0xbadc0de@l3labs.org>"]
+authors = ["Antony <0xbadc0de@l3labs.org>"]
 entry = "lib.sw"
 license = "Apache-2.0"
 name = "helpers"

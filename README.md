@@ -4,17 +4,20 @@
 
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="494">
-  <img alt="title image light / dark." src="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/welcome_to_contracts.png" width="700" height="494">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
+  <img alt="title image light / dark." src="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
 </picture>
 </p>
 
 <i>This project is being actively developed.</i>
 
+## Notice Jan 2025
 
-## Compilation:
+Some files may be missing as we are currently reworking the directory system.
 
-Compile with `forc` version 0.63.5
+## Compilation
+
+Compile with `forc` version 0.66.5
 
 ```console
 cd ./contracts
@@ -29,7 +32,7 @@ forc test
 ```
 
 
-## Fuel network compatibility:
+## Fuel network compatibility
 
 Compatibility.
 
@@ -37,11 +40,11 @@ Compatibility.
 ┌────────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                    │
 │                                                                                    │
-│        fuels = "0.66.x"                                                            │
-│        fuel-vm = "0.56.0"                                                          │
-│        fuel-core v0.35.0                                                           │
+│        fuels = "0.66.5"                                                            │
+│        fuel-vm = "0.58.2"                                                          │
+│        fuel-core v0.40.0                                                           │
 │                                                                                    │
-│        Sway v0.63.5                                                                │
+│        Sway v0.66.5                                                                │
 │                                                                                    │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```

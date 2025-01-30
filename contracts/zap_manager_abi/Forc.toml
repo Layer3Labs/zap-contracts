@@ -1,7 +1,0 @@
-[project]
-authors = ["0xbadc0de <0xbadc0de@l3labs.org>"]
-entry = "manager.sw"
-license = "Apache-2.0"
-name = "zap_manager_abi"
-
-[dependencies]

@@ -1,6 +1,11 @@
 [[package]]
+name = "bignum"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = ["std"]
+
+[[package]]
 name = "core"
-source = "path+from-root-D19F39D92CA9923C"
+source = "path+from-root-6A8836696D55BC6E"
 
 [[package]]
 name = "helpers"
@@ -11,6 +16,7 @@ dependencies = ["std"]
 name = "master"
 source = "member"
 dependencies = [
+    "helpers",
     "ptools",
     "std",
     "zapwallet_consts",
@@ -20,14 +26,21 @@ dependencies = [
 name = "ptools"
 source = "path+from-root-B2FDB073770A0553"
 dependencies = [
+    "bignum",
     "helpers",
     "std",
+    "zap_utils",
 ]
 
 [[package]]
 name = "std"
-source = "git+https://github.com/fuellabs/sway?tag=v0.63.1#169f91ae0a6a698bd1cb459c4c203bab646a38ec"
+source = "git+https://github.com/fuellabs/sway?tag=v0.66.5#94a066652468b4afa3bd396dacef482ed590976b"
 dependencies = ["core"]
+
+[[package]]
+name = "zap_utils"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = ["std"]
 
 [[package]]
 name = "zapwallet_consts"

@@ -1,0 +1,10 @@
+[project]
+authors = ["Antony <antony@l3labs.org>"]
+entry = "lib.sw"
+license = "Apache-2.0"
+name = "zap_utils"
+
+[dependencies]
+
+# for debug:
+helpers = { path = "../../helpers" }

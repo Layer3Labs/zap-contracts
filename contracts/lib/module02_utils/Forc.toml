@@ -1,0 +1,13 @@
+[project]
+authors = ["Antony <antony@l3labs.org>"]
+entry = "lib.sw"
+license = "Apache-2.0"
+name = "module02_utils"
+
+[dependencies]
+helpers = { path = "../../helpers" }
+bignum = { path = "../../sway-bignum/bignum" }
+ptools = { path = "../../ptools" }
+zapwallet_consts = { path = "../../zapwallet_consts" }
+# zap_utils = { path = "../zap_utils" }
+io_utils = { path = "../io_utils" }
