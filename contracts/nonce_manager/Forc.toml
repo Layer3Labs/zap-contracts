@@ -1,9 +1,0 @@
-[project]
-authors = ["0xbadc0de <0xbadc0de@l3labs.org>"]
-entry = "main.sw"
-license = "Apache-2.0"
-name = "nonce_manager"
-
-[dependencies]
-
-nonce_manager_abi = { path = "../nonce_manager_abi/", package = "nonce_manager_abi" }

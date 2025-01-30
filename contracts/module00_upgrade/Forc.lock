@@ -1,0 +1,71 @@
+[[package]]
+name = "bignum"
+source = "path+from-root-6CC54318E1835859"
+dependencies = ["std"]
+
+[[package]]
+name = "core"
+source = "path+from-root-6A8836696D55BC6E"
+
+[[package]]
+name = "helpers"
+source = "path+from-root-6CC54318E1835859"
+dependencies = ["std"]
+
+[[package]]
+name = "io_utils"
+source = "path+from-root-6CC54318E1835859"
+dependencies = [
+    "bignum",
+    "helpers",
+    "ptools",
+    "std",
+    "zap_utils",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "module00_upgrade"
+source = "member"
+dependencies = [
+    "helpers",
+    "io_utils",
+    "module00_utils",
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "module00_utils"
+source = "path+from-root-6CC54318E1835859"
+dependencies = [
+    "helpers",
+    "io_utils",
+    "ptools",
+    "std",
+]
+
+[[package]]
+name = "ptools"
+source = "path+from-root-6CC54318E1835859"
+dependencies = [
+    "bignum",
+    "helpers",
+    "std",
+    "zap_utils",
+]
+
+[[package]]
+name = "std"
+source = "git+https://github.com/fuellabs/sway?tag=v0.66.5#94a066652468b4afa3bd396dacef482ed590976b"
+dependencies = ["core"]
+
+[[package]]
+name = "zap_utils"
+source = "path+from-root-6CC54318E1835859"
+dependencies = ["std"]
+
+[[package]]
+name = "zapwallet_consts"
+source = "path+from-root-6CC54318E1835859"
+dependencies = ["std"]

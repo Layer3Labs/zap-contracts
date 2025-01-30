@@ -1,0 +1,10 @@
+[project]
+authors = ["Antony <0xbadc0de@l3labs.org>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "master"
+
+[dependencies]
+zapwallet_consts = { path = "../zapwallet_consts" }
+ptools = { path = "../ptools" }
+helpers = { path = "../helpers" }
