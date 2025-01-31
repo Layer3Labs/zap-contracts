@@ -11,6 +11,9 @@ use std::*;
 use std::bytes_conversions::{u64::*, b256::*};
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 
+use zapwallet_consts::wallet_consts::{V1_SWAP_POSITION, V1_LEFT_LEAF_HASH};
+
+
 // const LEAF_SIZE: u64 = 16 * 1024;
 // const PADDING_BYTE: u8 = 0u8;
 // const MULTIPLE: u64 = 8;
@@ -75,6 +78,16 @@ pub fn get_zapwallet_address_from_code(
 }
 
 
+/// Calculates a V1 ZapWallet master address using a right leaf's bytes and a swap value.
+///
+/// # Arguments
+///
+/// * `right_bytes` - The right leaf bytecode that will be modified.
+/// * `swap_value` - The pubkey to be swapped into the bytes at a predefined position.
+///
+/// # Returns
+///
+/// * [b256] - The calculated master address, or zero if swap operation fails.
 ///
 pub fn get_master_addr_with_right_leaf_bytes(
     ref mut right_bytes: Bytes,
@@ -92,8 +105,9 @@ pub fn get_master_addr_with_right_leaf_bytes(
 
 
     //REVIEW - This is the left leaf hash for a release build of Master.
-    let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
-    let swap_position = 3600u64;        // Position to swap at - release
+    // let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
+    let left_hash: b256 = V1_LEFT_LEAF_HASH;
+    let swap_position = V1_SWAP_POSITION;  // Position to swap at - release
 
 
 
@@ -135,7 +149,16 @@ pub fn get_master_addr_with_right_leaf_bytes(
     get_predi_addr_from_root(root)
 }
 
-
+/// Calculates the hash of a leaf by prepending a leaf prefix to the input data.
+///
+/// # Arguments
+///
+/// * `data` - The bytes to be hashed.
+///
+/// # Returns
+///
+/// * [b256] - The SHA-256 hash of the prefixed data.
+///
 pub fn get_leaf_hash(data: Bytes) -> b256 {
 
     let mut j = 0;
@@ -153,8 +176,16 @@ pub fn get_leaf_hash(data: Bytes) -> b256 {
     chunk_hash
 }
 
-
-/// calculate the predicate address from the 32-byte root.
+/// Calculates a predicate address from a 32-byte root by prepending a contract ID seed.
+///
+/// # Arguments
+///
+/// * `digest` - The 32-byte root value.
+///
+/// # Returns
+///
+/// * [b256] - The SHA-256 hash of the seeded root value.
+///
 pub fn get_predi_addr_from_root(digest: b256) -> b256 {
     let root_bytes: Bytes = Bytes::from(digest);
     let mut result_buffer = b256::min();
@@ -173,10 +204,25 @@ pub fn get_predi_addr_from_root(digest: b256) -> b256 {
     return(sha256_digest(bytes_to_hash));
 }
 
-
-
-//-------------------------------------------------------------------------
-
+/// Calculates a V2 master address from leaf hashes and final leaf bytecode.
+///
+/// # Arguments
+///
+/// * `leaf_hashes` - Array of up to 8 leaf hashes.
+/// * `num_leaves` - Total number of leaves in the tree.
+/// * `final_leaf_bytes` - Bytecode for the final leaf.
+/// * `final_leaf_position` - Position where the final leaf should be placed.
+/// * `swap_value` - Value to be swapped into the final leaf bytes.
+/// * `swap_position` - Position in final leaf bytes where swap should occur.
+///
+/// # Returns
+///
+/// * [b256] - The calculated V2 master address, or zero if swap operation fails.
+///
+/// # Additional Information
+///
+/// Restricted to a maximumof 8 leaves.
+///
 pub fn get_v2master_addr_leaf_hash_and_bytes(
     ref mut leaf_hashes: [b256; 8],
     num_leaves: u64,
@@ -186,21 +232,7 @@ pub fn get_v2master_addr_leaf_hash_and_bytes(
     swap_position: u64,
 ) -> b256 {
 
-    // Add left leaf hash bytes
-    //REVIEW - This is the left leaf hash for a debug build of Master.
-    // let left_hash: b256 = 0x59fae45635d0f7f560d4fbfe02899305e2d5e7d16e864eb5e506c46b85dd3223;
-
-    //REVIEW - OG - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x03c0ca1ee820cc8d85c0082e4a7b1b091b1ec6a06ad5bdcb4153d9b0d5c0e78d;
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-
-    //REVIEW - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
-    // let swap_position = 3600u64;        // Position to swap at - release
-
-
-    // First perform the swap in the OWNER PUBKEY bytes
+    // Perform the swap in of the OWNER PUBKEY bytes
     let swap_success = swap_bytes_at_position(
         final_leaf_bytes,
         swap_position,
@@ -214,13 +246,13 @@ pub fn get_v2master_addr_leaf_hash_and_bytes(
 
     // Calculate the right leaf hash with the swapped OWNER PUBKEY bytes
     let final_leaf_hash = get_leaf_hash(final_leaf_bytes);
-    let final_leaf_hash: b256 = 0xe85ee99f4887c5ea53be14a833bbe383059b0a1af80f159b517e1983e178f220;
 
-    // place the final leaf hash into its position
+    // Place the final leaf hash into its position
     leaf_hashes[final_leaf_position] = final_leaf_hash;
 
     //------------------------------------
     //NOTE - DEBUG
+    log(String::from_ascii_str("inside merkle - leaves idx/hash:"));
     let mut i = 0u64;
     while i < 8 {
         log(u256_to_hex(asm(r1: (0, 0, 0, i)) { r1: u256 }));
@@ -229,14 +261,28 @@ pub fn get_v2master_addr_leaf_hash_and_bytes(
     }
     //------------------------------------
 
-
     // Calculate and return root hash
     let root = get_merkle_root_from_leaf_hashes(leaf_hashes, num_leaves);
 
     get_predi_addr_from_root(root)
 }
 
-/// restricted to 8 lots of LEAF_SIZE,
+/// Calculates the Merkle root from an array of leaf hashes.
+/// Limited to 8 leaves maximum.
+///
+/// # Arguments
+///
+/// * `leaf_hashes` - Array of leaf hashes (maximum 8).
+/// * `num_leaves` - Number of active leaves in the array.
+///
+/// # Returns
+///
+/// * [b256] - The calculated Merkle root.
+///
+/// # Additional Information
+///
+/// Restricted to a maximumof 8 leaves.
+///
 pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64) -> b256 {
     let mut tree_hashes = leaf_hashes;
     let mut tree_size = num_leaves;
@@ -291,7 +337,40 @@ pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64)
     tree_hashes[0]
 }
 
+/// Swaps 32 bytes at a specified position in a byte array with new bytes.
+///
+/// # Arguments
+///
+/// * `data` - The bytes to modify.
+/// * `position` - The starting position for the swap.
+/// * `new_bytes` - The new 32 bytes to insert.
+///
+/// # Returns
+///
+/// * [bool] - True if swap was successful, false if position is invalid
+///
+fn swap_bytes_at_position(ref mut data: Bytes, position: u64, new_bytes: b256) -> bool {
+    // Check if position is valid (there must be 32 bytes after position)
+    if position + 32 > data.len() {
+        return false;
+    }
 
+    // Convert b256 to Bytes to get the new bytes
+    let swap_bytes = Bytes::from(new_bytes);
+
+    // We know swap_bytes is exactly 32 bytes since it comes from b256
+    let mut i = 0;
+    while i < 32 {
+        let curr_pos = position + i;
+        // Get current byte
+        let temp = data.get(curr_pos).unwrap();
+        // Set new byte
+        data.set(curr_pos, swap_bytes.get(i).unwrap());
+        i += 1;
+    }
+
+    true
+}
 
 //FIXME - move to helpers or use Hash
 fn sha256_digest(bytes_to_hash: Bytes) -> b256 {
@@ -318,27 +397,3 @@ fn sha256_digest(bytes_to_hash: Bytes) -> b256 {
     };
     return(result_buffer);
 }
-
-fn swap_bytes_at_position(ref mut data: Bytes, position: u64, new_bytes: b256) -> bool {
-    // Check if position is valid (there must be 32 bytes after position)
-    if position + 32 > data.len() {
-        return false;
-    }
-
-    // Convert b256 to Bytes to get the new bytes
-    let swap_bytes = Bytes::from(new_bytes);
-
-    // We know swap_bytes is exactly 32 bytes since it comes from b256
-    let mut i = 0;
-    while i < 32 {
-        let curr_pos = position + i;
-        // Get current byte
-        let temp = data.get(curr_pos).unwrap();
-        // Set new byte
-        data.set(curr_pos, swap_bytes.get(i).unwrap());
-        i += 1;
-    }
-
-    true
-}
-
