@@ -103,12 +103,12 @@ impl MerkleUtils for V1Predicate {
 
     /// Calculates the predicate address for a V1 ZapWallet using a two-leaf merkle tree,
     /// where the left leaf is fixed and the right leaf bytcode is variable and contains the
-    /// owner's EVM address.
+    /// owner's EVM address and any ZapWallet related configurables.
     ///
     /// # Arguments
     ///
-    /// * `receiver_code` - The bytecode for the right leaf that will be modified with owner's address
-    /// * `receiver_evm_addr` - The owner's EVM address to be swapped into the right leaf
+    /// * `v1_code` - The bytecode for the right leaf that will be modified with owner's address
+    /// * `owner_evm_addr` - The owner's EVM address to be swapped into the right leaf
     ///
     /// # Returns
     ///
@@ -124,26 +124,18 @@ impl MerkleUtils for V1Predicate {
     ///
     fn calculate_predicate_address(
         self,
-        receiver_code: Bytes,
-        receiver_evm_addr: b256,
+        v1_code: Bytes,
+        owner_evm_addr: b256,
     ) -> b256 {
         // Create mutable copy of input data
-        let mut right_bytes = receiver_code;
-
-        let receiver_v1master_addr = get_v1master_addr_with_right_leaf_bytes(
+        let mut right_bytes = v1_code;
+        // Calculate v1 master address with specific right leaf data.
+        let calcualted_v1master_addr = get_v1master_addr_with_right_leaf_bytes(
             right_bytes,
-            receiver_evm_addr,
+            owner_evm_addr,
         );
 
-        // if receiving_addr == receiver_master_addr {
-        //     return true;
-        // }
-        // return false;
-
-        //NOTE - DEBUG
-        // return true;
-
-        receiver_v1master_addr
+        calcualted_v1master_addr
     }
 }
 
@@ -201,7 +193,7 @@ impl MerkleUtils for V2Predicate {
 
         //------------------------------------
         //NOTE - DEBUG
-        log(String::from_ascii_str("inside merkle - leaves idx/hash:"));
+        log(String::from_ascii_str("v2 calculate_predicate_address - leaves idx/hash:"));
         let mut i = 0u64;
         while i < 8 {
             log(u256_to_hex(asm(r1: (0, 0, 0, i)) { r1: u256 }));
@@ -417,22 +409,11 @@ pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64)
 pub fn get_v1master_addr_with_right_leaf_bytes(
     ref mut right_bytes: Bytes,
     swap_value: b256,
-    // swap_position: u64
 ) -> b256 {
 
-    // Add left leaf hash bytes
-    //REVIEW - This is the left leaf hash for a debug build of Master.
-    // let left_hash: b256 = 0x59fae45635d0f7f560d4fbfe02899305e2d5e7d16e864eb5e506c46b85dd3223;
-
-    //REVIEW - OG - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x03c0ca1ee820cc8d85c0082e4a7b1b091b1ec6a06ad5bdcb4153d9b0d5c0e78d;
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-
-    //REVIEW - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
+    // The left leaf hash and position at which to swap for a release build of Master.
     let left_hash: b256 = V1_LEFT_LEAF_HASH;
-    let swap_position = V1_SWAP_POSITION;  // Position to swap at - release
+    let swap_position = V1_SWAP_POSITION;
 
     // First perform the swap in the OWNER PUBKEY bytes
     let swap_success = swap_bytes_at_position(
