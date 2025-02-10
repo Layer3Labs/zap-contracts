@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  # "module00_upgrade",
+  "module00_upgrade",
   # "module01_evm_txtype1",
   # "module02_evm_txtype2",
   # "module03_erc20",
