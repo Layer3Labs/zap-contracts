@@ -4,7 +4,7 @@ members = [
   "module01_evm_txtype1",
   "module02_evm_txtype2",
   "module03_erc20",
-  # "module04_txidwit",
+  "module04_txidwit",
   # "module05_eip712_simple",
   "master",
   "zap_manager",
