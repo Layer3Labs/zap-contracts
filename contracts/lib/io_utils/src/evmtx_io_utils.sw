@@ -1,43 +1,26 @@
 library;
 
-use std::{
-    bytes::Bytes,
+use std::bytes::Bytes;
+use zapwallet_consts::wallet_consts::{
+    FUEL_BASE_ASSET, V1_SWAP_POSITION, V1_LEFT_LEAF_HASH,
 };
-use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
-use bignum::wei_to_eth::wei_to_eth;
-use zap_utils::merkle_utils::get_master_addr_with_right_leaf_bytes;
+use ::io::InpOut;
+use zap_utils::{
+    merkle_utils::{MerkleUtils, V1Predicate},
+    wei_to_eth::wei_to_eth,
+};
 
-//-------------------------------------------------------
-//FIXME - this needs to be moved to a general file
 
-/// A basic struct to store information about
-/// either a transaction input or output.
-pub struct InpOut {
-    pub assetid: b256,
-    pub amount: Option<u64>,
-    pub owner: Option<Address>,
-}
-
-impl InpOut {
-    pub fn new(
-        assetid: b256,
-        amountu64: Option<u64>,
-        owner: Option<Address>,
-    ) -> InpOut {
-        InpOut {
-            assetid: assetid,
-            amount: amountu64,
-            owner: owner,
-        }
-    }
-}
-
-//-------------------------------------------------------
-
-/// for Success:
-/// - nonce amount at input and owner address.
-/// for Fail:
-/// - error_code
+/// Result type for Nonce validation checks
+///
+/// # Variants
+/// * `Success(u64, Address)` - Nonce check succeeded, contains:
+///   - The nonce value found in the input (u64)
+///   - The owner address of the nonce asset (Address)
+/// * `Fail(u64)` - Contains an error code indicating why the nonce check failed:
+///   - 2070: No valid amount provided for nonce asset
+///   - 2071: Correct nonce asset/value combination not found
+///
 pub enum NonceCheckResult {
     Success: (u64, Address),
     Fail: (u64),
@@ -74,7 +57,7 @@ pub fn nonce_check(
     while i < tx_inputs.len() {
         let input = tx_inputs.get(i).unwrap();
         let asset = input.assetid;
-        let amount = input.amount;
+        // let amount = input.amount;
 
         // if the i'th assetid is not the same as the nonce assetid, skip it.
         if asset != nonce_assetid {
@@ -106,16 +89,20 @@ pub fn nonce_check(
     NonceCheckResult::Fail(2071u64) // Correct nonce asset/value not found.
 }
 
-/// for Success:
-/// - total aggregated amoutn in fueleth,
-/// - owner of all inputs,
-/// - bool to signal if all the inputs are of type FUEL_BASE_ASSET and owner.
+/// Result type for asset aggregation of a FUEL_BASE_ASSET asset
+///
+/// # Variants
+/// * `Success(u256, Address, bool)` - Aggregation succeeded, contains:
+///   - Total aggregated amount in Fuel ETH (u256)
+///   - Owner address of the input assets (Address)
+///   - Boolean indicating if all inputs are FUEL_BASE_ASSET and have same owner
+/// * `Fail(u64)` - Contains an error code indicating why aggregation failed:
+///   - 2066: No valid amount provided for FUEL_BASE_ASSET input
 ///
 pub enum AggregateResult {
     Success: (u256, Address, bool),
     Fail: (u64),
 }
-
 
 /// Aggregates a single asset and their amounts from a vector of InpOut structures.
 ///
@@ -197,7 +184,6 @@ pub fn aggregate_single_asset(
     }
 }
 
-
 /// Verifies that there exists a change output for the exptected asset that is addressed to a receiver.
 ///
 /// # Arguments
@@ -232,8 +218,7 @@ pub fn verify_change_output(
     false
 }
 
-
-/// Verifies that a receiving address matches the master address of a ZapWallet,
+/// Verifies that a receiving address matches the master address of a V1 ZapWallet,
 /// by calculating the master address from the receiver's bytecode and given EVM address.
 ///
 /// # Arguments
@@ -258,21 +243,19 @@ pub fn verify_receiver(
     receiving_addr: b256,
 ) -> bool {
 
-    // let swap_position = 8208u64;        // Position to swap at
-    // let swap_position = 8528u64;        // Position to swap at - debug
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-
-    let receiver_master_addr = get_master_addr_with_right_leaf_bytes(
+    // Calculate the v1 predicate address
+    let v1_predicate = V1Predicate::new();
+    let v1_wallet_addr = v1_predicate.calculate_predicate_address(
         receiver_code,
-        receiver_evm_addr,
-        // swap_position
+        receiver_evm_addr
     );
 
-    // if receiving_addr == receiver_master_addr {
-    //     return true;
-    // }
-    // return false;
+    if receiving_addr == v1_wallet_addr {
+        return true;
+    }
+    return false;
 
-    return true;
+    //NOTE - DEBUG:
+    // return true;
 }
+

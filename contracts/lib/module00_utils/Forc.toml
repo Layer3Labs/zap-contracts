@@ -5,6 +5,5 @@ license = "Apache-2.0"
 name = "module00_utils"
 
 [dependencies]
-helpers = { path = "../../helpers" }
-ptools = { path = "../../ptools" }
+zap_utils = { path = "../zap_utils" }
 io_utils = { path = "../io_utils" }

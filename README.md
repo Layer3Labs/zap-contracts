@@ -11,23 +11,23 @@
 
 <i>This project is being actively developed.</i>
 
-## Notice Jan 2025
+## Notice
 
-Some files may be missing as we are currently reworking the directory system.
+Not for production.
 
 ## Compilation
 
-Compile with `forc` version 0.66.5
+Compile with `forc` version 0.66.6
 
 ```console
 cd ./contracts
-forc build
+forc build --release
 ```
 
 ## Testing
 
 ```console
-cd ./contracts
+cd ./contracts/tests
 forc test
 ```
 
@@ -40,11 +40,11 @@ Compatibility.
 ┌────────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                    │
 │                                                                                    │
-│        fuels = "0.66.5"                                                            │
+│        fuels = "0.66.6"                                                            │
 │        fuel-vm = "0.58.2"                                                          │
 │        fuel-core v0.40.0                                                           │
 │                                                                                    │
-│        Sway v0.66.5                                                                │
+│        Sway v0.66.6                                                                │
 │                                                                                    │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```

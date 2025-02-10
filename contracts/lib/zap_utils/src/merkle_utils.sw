@@ -12,7 +12,7 @@ use std::bytes_conversions::{u64::*, b256::*};
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 
 use zapwallet_consts::wallet_consts::{V1_SWAP_POSITION, V1_LEFT_LEAF_HASH};
-
+use ::rlp_helpers::*;
 
 // const LEAF_SIZE: u64 = 16 * 1024;
 // const PADDING_BYTE: u8 = 0u8;
@@ -21,24 +21,8 @@ const LEAF_PREFIX: u64 = 0;
 const NODE_PREFIX: u64 = 1;
 
 
-
-// ------------------------------
-// only for debug
-use helpers::{
-    general_helpers::*,
-    hex::*,
-    numeric_utils::*,
-};
-// ------------------------------
-
-
-
-
 /// Struct representing a V1 ZapWallet predicate
-pub struct V1Predicate {
-    // left_leaf_hash: b256,
-    // swap_position: u64,
-}
+pub struct V1Predicate { }
 
 /// Struct representing a V2 ZapWallet predicate with up to 8 leaves
 pub struct V2Predicate {
@@ -191,17 +175,6 @@ impl MerkleUtils for V2Predicate {
         // Place the final leaf hash into its position
         leaf_hashes[final_leaf_position] = final_leaf_hash;
 
-        //------------------------------------
-        //NOTE - DEBUG
-        log(String::from_ascii_str("v2 calculate_predicate_address - leaves idx/hash:"));
-        let mut i = 0u64;
-        while i < 8 {
-            log(u256_to_hex(asm(r1: (0, 0, 0, i)) { r1: u256 }));
-            log(b256_to_hex(leaf_hashes[i]));
-            i += 1;
-        }
-        //------------------------------------
-
         // Calculate and return root hash
         let root = get_merkle_root_from_leaf_hashes(leaf_hashes, self.num_leaves);
         calculate_predi_addr_from_root(root)
@@ -231,7 +204,7 @@ pub fn calculate_leaf_hash(data: Bytes) -> b256 {
         leafbytes.push(data.get(j).unwrap());
         j += 1;
     }
-    let chunk_hash = sha256_digest(leafbytes);
+    let chunk_hash = hash_bytes_sha256(leafbytes);
 
     chunk_hash
 }
@@ -248,7 +221,7 @@ pub fn calculate_leaf_hash(data: Bytes) -> b256 {
 ///
 pub fn calculate_predi_addr_from_root(digest: b256) -> b256 {
     let root_bytes: Bytes = Bytes::from(digest);
-    let mut result_buffer = b256::min();
+    // let mut result_buffer = b256::min();
     let mut bytes_to_hash = Bytes::new();
     let contractid_seed = [0x46u8, 0x55u8, 0x45u8, 0x4Cu8];
     let mut i = 0;
@@ -261,7 +234,7 @@ pub fn calculate_predi_addr_from_root(digest: b256) -> b256 {
         bytes_to_hash.push(root_bytes.get(j).unwrap());
         j += 1;
     }
-    return(sha256_digest(bytes_to_hash));
+    return(hash_bytes_sha256(bytes_to_hash));
 }
 
 /// Swaps 32 bytes at a specified position in a byte array with new bytes.
@@ -290,39 +263,13 @@ fn swap_bytes_at_position(ref mut data: Bytes, position: u64, new_bytes: b256) -
     while i < 32 {
         let curr_pos = position + i;
         // Get current byte
-        let temp = data.get(curr_pos).unwrap();
+        // let temp = data.get(curr_pos).unwrap();
         // Set new byte
         data.set(curr_pos, swap_bytes.get(i).unwrap());
         i += 1;
     }
 
     true
-}
-
-//FIXME - move to helpers or use Hash
-fn sha256_digest(bytes_to_hash: Bytes) -> b256 {
-    let mut result_buffer = b256::min();
-
-    let len = bytes_to_hash.len();
-    let a_size = len + 1;
-    let a_buflen = a_size - 1;
-    let x_src = bytes_to_hash.ptr();
-    asm(
-        hash: result_buffer,            // result buffer.
-        ptrdata: x_src,                 // the payload data bytes.
-        length: a_buflen,               // the length of the payload data.
-        size: a_size,                   // the size of the buffer to alloc on stack.
-        buflen: a_buflen,               // the size of the buffer to hash.
-        memptr                          //
-        ) {
-        aloc size;                              // allocate memory to the stack
-        addi memptr hp i1;                      // increase memory pointer for copying payload items
-        mcp  memptr ptrdata length;             // copy
-        addi memptr hp i1;                      // move memory pointer back to the beginning
-        s256 hash memptr buflen;
-        hash: b256
-    };
-    return(result_buffer);
 }
 
 /// Calculates the Merkle root from an array of leaf hashes.
@@ -376,7 +323,7 @@ pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64)
             }
 
             // Compute the parent hash
-            tree_hashes[next_tree_size] = sha256_digest(combined_bytes);
+            tree_hashes[next_tree_size] = hash_bytes_sha256(combined_bytes);
             next_tree_size += 1;
             j += 2;
         }
@@ -448,93 +395,7 @@ pub fn get_v1master_addr_with_right_leaf_bytes(
         i += 1;
     }
     // Calculate and return root hash
-    let root = sha256_digest(combined_bytes);
+    let root = hash_bytes_sha256(combined_bytes);
 
     calculate_predi_addr_from_root(root)
-}
-
-// Tests:
-// forc test test_01_v1_addr --logs
-#[test()]
-fn test_01_v1_addr() {
-
-    // Create v1 predicate instance
-    let v1_predicate = V1Predicate::new();
-
-    // Create example bytecode
-    let mut wallet_bytecode: Bytes = Bytes::new();
-    let mut i = 0;
-    while i < 6000 {
-        wallet_bytecode.push(1u8);
-        i += 1;
-    }
-
-    // Example EVM address
-    let owner_evm_addr: b256 = 0x000000000000000000000000333339d42a89028ee29a9e9f4822e651bac7ba14;
-
-    // Calculate address
-    let wallet_addr = v1_predicate.calculate_predicate_address(
-        wallet_bytecode,
-        owner_evm_addr
-    );
-
-    // Expected address
-    let expected_addr: b256 = 0x5de5051f6b75a113714aeec6b64ad2d08cf6cd24a5d98780c6b75d5e444fe5a0;
-
-    // Log results
-    log(String::from_ascii_str("Computed V1 Address:"));
-    log(b256_to_hex(wallet_addr));
-    log(String::from_ascii_str("Expected V1 Address:"));
-    log(b256_to_hex(expected_addr));
-
-    // Assert the result matches expected
-    // assert(wallet_addr == expected_addr);
-}
-
-
-// forc test test_02_v2_addr --logs
-#[test()]
-fn test_02_v2_addr() {
-    // Define the leaf hashes (example values)
-    let leaf_hashes: [b256; 8] = [
-        0x5a87dc701ab39fcbb7e85d759efa73c4f5117708d5da260438abf29562527f73, // H1
-        0xb1801cb3c24946da303cf876e1c53faf93c7254bd6a0f909039ed1b9c046ca78, // H2
-        b256::min(), // H3
-        b256::min(), // H4
-        // Fill the rest of the array with zeros (these will be ignored)
-        b256::min(), b256::min(), b256::min(), b256::min(),
-    ];
-
-    // pred_root: 097d805ec414b3f26fee4b5cf633cd81cead901425a299b80825ef6d25f1ffa4
-    // pred_addr: 5de5051f6b75a113714aeec6b64ad2d08cf6cd24a5d98780c6b75d5e444fe5a0
-
-    // Specify the actual number of leaves (4 in this case)
-    let num_leaves = 2;
-    let swap_position = 200;
-    let evm_addr: b256 = 0x000000000000000000000000333339d42a89028ee29a9e9f4822e651bac7ba14;
-
-    let mut final_leaf_bytes: Bytes = Bytes::new();
-    let mut a = 600;
-    while a > 0 {
-        final_leaf_bytes.push(1u8);
-        a -= 1;
-    }
-
-    // Compute the Merkle root from the leaf hashes
-    // let computed_root = get_merkle_root_from_leaf_hashes(leaf_hashes, num_leaves);
-
-    let v2_predicate = V2Predicate::new(leaf_hashes, num_leaves, swap_position);
-    let v2_address = v2_predicate.calculate_predicate_address(final_leaf_bytes, evm_addr);
-
-    // Expected v2 address
-    let expected_addr: b256 = 0x5de5051f6b75a113714aeec6b64ad2d08cf6cd24a5d98780c6b75d5e444fe5a0;
-
-    // Log the computed and expected roots for debugging
-    log(String::from_ascii_str("Computed V2 Address:"));
-    log(b256_to_hex(v2_address));
-    log(String::from_ascii_str("Expected V2 Address:"));
-    log(b256_to_hex(expected_addr));
-
-    // Assert that the computed root matches the expected root
-    // assert_eq(computed_root, expected_root);
 }

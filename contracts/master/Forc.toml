@@ -1,10 +1,11 @@
 [project]
-authors = ["Antony <0xbadc0de@l3labs.org>"]
+authors = ["Antony <antony@l3labs.org>"]
 entry = "main.sw"
 license = "Apache-2.0"
 name = "master"
 
 [dependencies]
+standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.6.3" }
 zapwallet_consts = { path = "../zapwallet_consts" }
-ptools = { path = "../ptools" }
-helpers = { path = "../helpers" }
+master_utils = { path = "../lib/master_utils" }
+zap_utils = { path = "../lib/zap_utils" }
