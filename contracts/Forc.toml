@@ -7,6 +7,7 @@ members = [
   "module04_txidwit",
   # "module05_eip712_simple",
   "module07_sponsor",
+  "module08",
   "master",
   "zap_manager",
   # "tests",
