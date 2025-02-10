@@ -7,6 +7,6 @@ members = [
   # "module04_txidwit",
   # "module05_eip712_simple",
   "master",
-  # "zap_manager",
+  "zap_manager",
   # "tests",
 ]
