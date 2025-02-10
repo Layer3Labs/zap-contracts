@@ -11,5 +11,5 @@ members = [
   "module08",
   "master",
   "zap_manager",
-  # "tests",
+  "tests",
 ]
