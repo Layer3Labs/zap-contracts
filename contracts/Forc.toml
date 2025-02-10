@@ -5,7 +5,7 @@ members = [
   "module02_evm_txtype2",
   "module03_erc20",
   "module04_txidwit",
-  # "module05_eip712_simple",
+  "module05_eip712_simple",
   "module06_eip712_contract",
   "module07_sponsor",
   "module08",
