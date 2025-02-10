@@ -1,0 +1,50 @@
+[[package]]
+name = "core"
+source = "path+from-root-2E654A91A5A21ADE"
+
+[[package]]
+name = "master_utils"
+source = "member"
+dependencies = [
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
+    "std",
+    "zap_utils",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "standards"
+source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c"
+dependencies = ["std"]
+
+[[package]]
+name = "standards"
+source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d"
+dependencies = ["std"]
+
+[[package]]
+name = "std"
+source = "git+https://github.com/fuellabs/sway?tag=v0.66.6#986aee2c1e34c9cd958c81e7fd6b84638b26619b"
+dependencies = ["core"]
+
+[[package]]
+name = "sway_libs"
+source = "git+https://github.com/FuelLabs/sway-libs?tag=v0.24.2#55d503c50281e775655e00282064e629f357dcfc"
+dependencies = [
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c",
+    "std",
+]
+
+[[package]]
+name = "zap_utils"
+source = "path+from-root-DC5B4C6B31819C1B"
+dependencies = [
+    "std",
+    "sway_libs",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "zapwallet_consts"
+source = "path+from-root-DC5B4C6B31819C1B"
+dependencies = ["std"]

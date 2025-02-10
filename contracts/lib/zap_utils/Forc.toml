@@ -5,6 +5,6 @@ license = "Apache-2.0"
 name = "zap_utils"
 
 [dependencies]
+zapwallet_consts = { path = "../../zapwallet_consts" }
+sway_libs = { git = "https://github.com/FuelLabs/sway-libs", tag = "v0.24.2" }
 
-# for debug:
-helpers = { path = "../../helpers" }

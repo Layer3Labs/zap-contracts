@@ -11,6 +11,9 @@ use std::*;
 use std::bytes_conversions::{u64::*, b256::*};
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 
+use zapwallet_consts::wallet_consts::{V1_SWAP_POSITION, V1_LEFT_LEAF_HASH};
+use ::rlp_helpers::*;
+
 // const LEAF_SIZE: u64 = 16 * 1024;
 // const PADDING_BYTE: u8 = 0u8;
 // const MULTIPLE: u64 = 8;
@@ -18,125 +21,178 @@ const LEAF_PREFIX: u64 = 0;
 const NODE_PREFIX: u64 = 1;
 
 
+/// Struct representing a V1 ZapWallet predicate
+pub struct V1Predicate { }
 
-// ------------------------------
-// only for debug
-use helpers::{
-    general_helpers::*,
-    hex::*,
-    numeric_utils::*,
-};
-// ------------------------------
+/// Struct representing a V2 ZapWallet predicate with up to 8 leaves
+pub struct V2Predicate {
+    leaf_hashes: [b256; 8],
+    num_leaves: u64,
+    swap_position: u64,
+}
 
+impl V1Predicate {
 
+    /// Creates a new V1Predicate with the given parameters
+    ///
+    /// # Arguments
+    ///
+    /// * `left_leaf_hash` - The hash of the left leaf
+    /// * `swap_position` - The position where EVM address should be swapped
+    ///
+    // pub fn new(left_leaf_hash: b256, swap_position: u64) -> Self {
+    //     Self {
+    //         left_leaf_hash,
+    //         swap_position,
+    //     }
+    // }
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
+impl V2Predicate {
 
+    /// Creates a new V2Predicate with the given parameters
+    ///
+    /// # Arguments
+    ///
+    /// * `leaf_hashes` - Array of initial leaf hashes
+    /// * `num_leaves` - Total number of leaves
+    /// * `swap_position` - Position for EVM address swap
+    ///
+    pub fn new(leaf_hashes: [b256; 8], num_leaves: u64, swap_position: u64) -> Self {
+        Self {
+            leaf_hashes,
+            num_leaves,
+            swap_position,
+        }
+    }
 
-/// Return the master address of a V1 ZapWallet, by calculating the master address from
-/// the receiver's bytecode and given EVM address.
+}
+
+/// Trait for merkle tree utility functions
+pub trait MerkleUtils {
+
+    /// Calculate predicate address from bytecode and EVM address
+    fn calculate_predicate_address(
+        self,
+        receiver_code: Bytes,
+        receiver_evm_addr: b256,
+    ) -> b256;
+
+}
+
+impl MerkleUtils for V1Predicate {
+
+    /// Calculates the predicate address for a V1 ZapWallet using a two-leaf merkle tree,
+    /// where the left leaf is fixed and the right leaf bytcode is variable and contains the
+    /// owner's EVM address and any ZapWallet related configurables.
+    ///
+    /// # Arguments
+    ///
+    /// * `v1_code` - The bytecode for the right leaf that will be modified with owner's address
+    /// * `owner_evm_addr` - The owner's EVM address to be swapped into the right leaf
+    ///
+    /// # Returns
+    ///
+    /// * [b256] - The calculated predicate address, or b256::min() if the swap operation fails
+    ///
+    /// # Details
+    ///
+    /// The function:
+    /// 1. Takes the right leaf's bytecode and swaps in the owner's EVM address at V1_SWAP_POSITION
+    /// 2. Hashes the modified right leaf using SHA-256 with a leaf prefix
+    /// 3. Combines the fixed left leaf hash (V1_LEFT_LEAF_HASH) and modified right leaf hash into a two-leaf merkle tree
+    /// 4. Computes the final predicate address by adding a contract ID seed to the merkle root
+    ///
+    fn calculate_predicate_address(
+        self,
+        v1_code: Bytes,
+        owner_evm_addr: b256,
+    ) -> b256 {
+        // Create mutable copy of input data
+        let mut right_bytes = v1_code;
+        // Calculate v1 master address with specific right leaf data.
+        let calcualted_v1master_addr = get_v1master_addr_with_right_leaf_bytes(
+            right_bytes,
+            owner_evm_addr,
+        );
+
+        calcualted_v1master_addr
+    }
+}
+
+impl MerkleUtils for V2Predicate {
+
+    /// Calculates the predicate address for a V2 ZapWallet by constructing a merkle tree
+    /// from the stored leaf hashes and a final leaf containing the owner's EVM address.
+    ///
+    /// # Arguments
+    ///
+    /// * `final_leaf_bytes` - The bytecode for the final leaf that will be modified with owner's address
+    /// * `owner_evm_addr` - The owner's EVM address to be inserted into the final leaf
+    ///
+    /// # Returns
+    ///
+    /// * [b256] - The calculated predicate address, or b256::zero() if the swap operation fails
+    ///
+    /// # Details
+    ///
+    /// The function:
+    /// 1. Takes the final leaf's bytecode and swaps in the owner's EVM address at self.swap_position
+    /// 2. Hashes the modified final leaf using SHA-256 with a leaf prefix
+    /// 3. Places this hash in the last position of the merkle tree (at self.num_leaves - 1)
+    /// 4. Constructs a merkle tree using all leaf hashes (up to 8 leaves max)
+    /// 5. Computes the final predicate address by adding a contract ID seed to the merkle root
+    ///
+    fn calculate_predicate_address(
+        self,
+        final_leaf_bytes: Bytes,
+        owner_evm_addr: b256,
+    ) -> b256 {
+        // Create mutable copy of input data
+        let mut leaf_hashes = self.leaf_hashes;
+        let mut final_bytes = final_leaf_bytes;
+        // final leaf position is always last
+        let final_leaf_position = self.num_leaves - 1;
+
+        // Perform the swap in of the OWNER PUBKEY bytes
+        let swap_success = swap_bytes_at_position(
+            final_bytes,
+            self.swap_position,
+            owner_evm_addr
+        );
+
+        // Return zero hash if swap failed
+        if !swap_success {
+            return b256::zero();
+        }
+
+        // Calculate the right leaf hash with the swapped OWNER PUBKEY bytes
+        let final_leaf_hash = calculate_leaf_hash(final_bytes);
+
+        // Place the final leaf hash into its position
+        leaf_hashes[final_leaf_position] = final_leaf_hash;
+
+        // Calculate and return root hash
+        let root = get_merkle_root_from_leaf_hashes(leaf_hashes, self.num_leaves);
+        calculate_predi_addr_from_root(root)
+    }
+
+}
+
+/// Calculates the hash of a leaf by prepending a leaf prefix to the input data.
 ///
 /// # Arguments
 ///
-/// * `receiver_code` - The bytecode of the receiver's ZapWallet as mutable Bytes
-/// * `receiver_evm_addr` - The EVM address (as b256).
+/// * `data` - The bytes to be hashed.
 ///
 /// # Returns
 ///
-/// * `b256` - Returns the V1 ZapWallet address that was calculated.
+/// * [b256] - The SHA-256 hash of the prefixed data.
 ///
-/// The function works by:
-/// 1. Swapping in the EVM address at a specific position in the bytecode.
-/// 2. Calculating the master address from the modified bytecode.
-///
-pub fn get_zapwallet_address_from_code(
-    ref mut receiver_code: Bytes,
-    receiver_evm_addr: b256,
-) -> b256 {
-
-    // let swap_position = 8208u64;        // Position to swap at
-    // let swap_position = 8528u64;        // Position to swap at - debug
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-    let receiver_master_addr = get_master_addr_with_right_leaf_bytes(
-        receiver_code,
-        receiver_evm_addr,
-        // swap_position
-    );
-
-    // if receiving_addr == receiver_master_addr {
-    //     return true;
-    // }
-    // return false;
-
-    //NOTE - DEBUG
-    // return true;
-
-    receiver_master_addr
-}
-
-
-///
-pub fn get_master_addr_with_right_leaf_bytes(
-    ref mut right_bytes: Bytes,
-    swap_value: b256,
-    // swap_position: u64
-) -> b256 {
-
-    // Add left leaf hash bytes
-    //REVIEW - This is the left leaf hash for a debug build of Master.
-    // let left_hash: b256 = 0x59fae45635d0f7f560d4fbfe02899305e2d5e7d16e864eb5e506c46b85dd3223;
-
-    //REVIEW - OG - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x03c0ca1ee820cc8d85c0082e4a7b1b091b1ec6a06ad5bdcb4153d9b0d5c0e78d;
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-
-    //REVIEW - This is the left leaf hash for a release build of Master.
-    let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
-    let swap_position = 3600u64;        // Position to swap at - release
-
-
-
-    // First perform the swap in the OWNER PUBKEY bytes
-    let swap_success = swap_bytes_at_position(
-        right_bytes,
-        swap_position,
-        swap_value
-    );
-
-    // Return zero hash if swap failed
-    if !swap_success {
-        return b256::min();
-    }
-
-    // Calculate the right leaf hash with the swapped OWNER PUBKEY bytes
-    let right_leaf_hash = get_leaf_hash(right_bytes);
-
-    // Combine the left and right leaf hashes with node prefix
-    let mut combined_bytes = Bytes::new();
-    combined_bytes.push(NODE_PREFIX.try_as_u8().unwrap()); // Add prefix 0x01 for node
-
-    let left_bytes = Bytes::from(left_hash);
-    let mut i = 0;
-    while i < 32 {
-        combined_bytes.push(left_bytes.get(i).unwrap());
-        i += 1;
-    }
-    // Add right leaf hash bytes
-    let right_bytes = Bytes::from(right_leaf_hash);
-    i = 0;
-    while i < 32 {
-        combined_bytes.push(right_bytes.get(i).unwrap());
-        i += 1;
-    }
-
-    // Calculate and return root hash
-    let root = sha256_digest(combined_bytes);
-    get_predi_addr_from_root(root)
-}
-
-
-pub fn get_leaf_hash(data: Bytes) -> b256 {
+pub fn calculate_leaf_hash(data: Bytes) -> b256 {
 
     let mut j = 0;
 
@@ -148,16 +204,24 @@ pub fn get_leaf_hash(data: Bytes) -> b256 {
         leafbytes.push(data.get(j).unwrap());
         j += 1;
     }
-    let chunk_hash = sha256_digest(leafbytes);
+    let chunk_hash = hash_bytes_sha256(leafbytes);
 
     chunk_hash
 }
 
-
-/// calculate the predicate address from the 32-byte root.
-pub fn get_predi_addr_from_root(digest: b256) -> b256 {
+/// Calculates a predicate address from a 32-byte root by prepending a contract ID seed.
+///
+/// # Arguments
+///
+/// * `digest` - The 32-byte root value.
+///
+/// # Returns
+///
+/// * [b256] - The SHA-256 hash of the seeded root value.
+///
+pub fn calculate_predi_addr_from_root(digest: b256) -> b256 {
     let root_bytes: Bytes = Bytes::from(digest);
-    let mut result_buffer = b256::min();
+    // let mut result_buffer = b256::min();
     let mut bytes_to_hash = Bytes::new();
     let contractid_seed = [0x46u8, 0x55u8, 0x45u8, 0x4Cu8];
     let mut i = 0;
@@ -170,73 +234,60 @@ pub fn get_predi_addr_from_root(digest: b256) -> b256 {
         bytes_to_hash.push(root_bytes.get(j).unwrap());
         j += 1;
     }
-    return(sha256_digest(bytes_to_hash));
+    return(hash_bytes_sha256(bytes_to_hash));
 }
 
-
-
-//-------------------------------------------------------------------------
-
-pub fn get_v2master_addr_leaf_hash_and_bytes(
-    ref mut leaf_hashes: [b256; 8],
-    num_leaves: u64,
-    ref mut final_leaf_bytes: Bytes,
-    final_leaf_position: u64,
-    swap_value: b256,
-    swap_position: u64,
-) -> b256 {
-
-    // Add left leaf hash bytes
-    //REVIEW - This is the left leaf hash for a debug build of Master.
-    // let left_hash: b256 = 0x59fae45635d0f7f560d4fbfe02899305e2d5e7d16e864eb5e506c46b85dd3223;
-
-    //REVIEW - OG - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x03c0ca1ee820cc8d85c0082e4a7b1b091b1ec6a06ad5bdcb4153d9b0d5c0e78d;
-    // let swap_position = 3576u64;        // Position to swap at - release
-
-
-    //REVIEW - This is the left leaf hash for a release build of Master.
-    // let left_hash: b256 = 0x887f618e0e5af1cc4ff0269243f7ce0dc8f0a8e2d240a62027fd2be36e805110;
-    // let swap_position = 3600u64;        // Position to swap at - release
-
-
-    // First perform the swap in the OWNER PUBKEY bytes
-    let swap_success = swap_bytes_at_position(
-        final_leaf_bytes,
-        swap_position,
-        swap_value
-    );
-
-    // Return zero hash if swap failed
-    if !swap_success {
-        return b256::min();
+/// Swaps 32 bytes at a specified position in a byte array with new bytes.
+///
+/// # Arguments
+///
+/// * `data` - The bytes to modify.
+/// * `position` - The starting position for the swap.
+/// * `new_bytes` - The new 32 bytes to insert.
+///
+/// # Returns
+///
+/// * [bool] - True if swap was successful, false if position is invalid
+///
+fn swap_bytes_at_position(ref mut data: Bytes, position: u64, new_bytes: b256) -> bool {
+    // Check if position is valid (there must be 32 bytes after position)
+    if position + 32 > data.len() {
+        return false;
     }
 
-    // Calculate the right leaf hash with the swapped OWNER PUBKEY bytes
-    let final_leaf_hash = get_leaf_hash(final_leaf_bytes);
-    let final_leaf_hash: b256 = 0xe85ee99f4887c5ea53be14a833bbe383059b0a1af80f159b517e1983e178f220;
+    // Convert b256 to Bytes to get the new bytes
+    let swap_bytes = Bytes::from(new_bytes);
 
-    // place the final leaf hash into its position
-    leaf_hashes[final_leaf_position] = final_leaf_hash;
-
-    //------------------------------------
-    //NOTE - DEBUG
-    let mut i = 0u64;
-    while i < 8 {
-        log(u256_to_hex(asm(r1: (0, 0, 0, i)) { r1: u256 }));
-        log(b256_to_hex(leaf_hashes[i]));
+    // We know swap_bytes is exactly 32 bytes since it comes from b256
+    let mut i = 0;
+    while i < 32 {
+        let curr_pos = position + i;
+        // Get current byte
+        // let temp = data.get(curr_pos).unwrap();
+        // Set new byte
+        data.set(curr_pos, swap_bytes.get(i).unwrap());
         i += 1;
     }
-    //------------------------------------
 
-
-    // Calculate and return root hash
-    let root = get_merkle_root_from_leaf_hashes(leaf_hashes, num_leaves);
-
-    get_predi_addr_from_root(root)
+    true
 }
 
-/// restricted to 8 lots of LEAF_SIZE,
+/// Calculates the Merkle root from an array of leaf hashes.
+/// Limited to 8 leaves maximum.
+///
+/// # Arguments
+///
+/// * `leaf_hashes` - Array of leaf hashes (maximum 8).
+/// * `num_leaves` - Number of active leaves in the array.
+///
+/// # Returns
+///
+/// * [b256] - The calculated Merkle root.
+///
+/// # Additional Information
+///
+/// Restricted to a maximumof 8 leaves.
+///
 pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64) -> b256 {
     let mut tree_hashes = leaf_hashes;
     let mut tree_size = num_leaves;
@@ -272,7 +323,7 @@ pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64)
             }
 
             // Compute the parent hash
-            tree_hashes[next_tree_size] = sha256_digest(combined_bytes);
+            tree_hashes[next_tree_size] = hash_bytes_sha256(combined_bytes);
             next_tree_size += 1;
             j += 2;
         }
@@ -291,54 +342,60 @@ pub fn get_merkle_root_from_leaf_hashes(leaf_hashes: [b256; 8], num_leaves: u64)
     tree_hashes[0]
 }
 
+/// Calculates a V1 ZapWallet master address using a right leaf's bytes and a swap value.
+///
+/// # Arguments
+///
+/// * `right_bytes` - The right leaf bytecode that will be modified.
+/// * `swap_value` - The pubkey to be swapped into the bytes at a predefined position.
+///
+/// # Returns
+///
+/// * [b256] - The calculated master address, or zero if swap operation fails.
+///
+pub fn get_v1master_addr_with_right_leaf_bytes(
+    ref mut right_bytes: Bytes,
+    swap_value: b256,
+) -> b256 {
 
+    // The left leaf hash and position at which to swap for a release build of Master.
+    let left_hash: b256 = V1_LEFT_LEAF_HASH;
+    let swap_position = V1_SWAP_POSITION;
 
-//FIXME - move to helpers or use Hash
-fn sha256_digest(bytes_to_hash: Bytes) -> b256 {
-    let mut result_buffer = b256::min();
+    // First perform the swap in the OWNER PUBKEY bytes
+    let swap_success = swap_bytes_at_position(
+        right_bytes,
+        swap_position,
+        swap_value
+    );
 
-    let len = bytes_to_hash.len();
-    let a_size = len + 1;
-    let a_buflen = a_size - 1;
-    let x_src = bytes_to_hash.ptr();
-    asm(
-        hash: result_buffer,            // result buffer.
-        ptrdata: x_src,                 // the payload data bytes.
-        length: a_buflen,               // the length of the payload data.
-        size: a_size,                   // the size of the buffer to alloc on stack.
-        buflen: a_buflen,               // the size of the buffer to hash.
-        memptr                          //
-        ) {
-        aloc size;                              // allocate memory to the stack
-        addi memptr hp i1;                      // increase memory pointer for copying payload items
-        mcp  memptr ptrdata length;             // copy
-        addi memptr hp i1;                      // move memory pointer back to the beginning
-        s256 hash memptr buflen;
-        hash: b256
-    };
-    return(result_buffer);
-}
-
-fn swap_bytes_at_position(ref mut data: Bytes, position: u64, new_bytes: b256) -> bool {
-    // Check if position is valid (there must be 32 bytes after position)
-    if position + 32 > data.len() {
-        return false;
+    // Return zero hash if swap failed
+    if !swap_success {
+        return b256::min();
     }
 
-    // Convert b256 to Bytes to get the new bytes
-    let swap_bytes = Bytes::from(new_bytes);
+    // Calculate the right leaf hash with the swapped OWNER PUBKEY bytes
+    let right_leaf_hash = calculate_leaf_hash(right_bytes);
 
-    // We know swap_bytes is exactly 32 bytes since it comes from b256
+    // Combine the left and right leaf hashes with node prefix
+    let mut combined_bytes = Bytes::new();
+    combined_bytes.push(NODE_PREFIX.try_as_u8().unwrap()); // Add prefix 0x01 for node
+
+    let left_bytes = Bytes::from(left_hash);
     let mut i = 0;
     while i < 32 {
-        let curr_pos = position + i;
-        // Get current byte
-        let temp = data.get(curr_pos).unwrap();
-        // Set new byte
-        data.set(curr_pos, swap_bytes.get(i).unwrap());
+        combined_bytes.push(left_bytes.get(i).unwrap());
         i += 1;
     }
+    // Add right leaf hash bytes
+    let right_bytes = Bytes::from(right_leaf_hash);
+    i = 0;
+    while i < 32 {
+        combined_bytes.push(right_bytes.get(i).unwrap());
+        i += 1;
+    }
+    // Calculate and return root hash
+    let root = hash_bytes_sha256(combined_bytes);
 
-    true
+    calculate_predi_addr_from_root(root)
 }
-

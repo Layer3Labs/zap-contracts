@@ -2,25 +2,14 @@ library;
 
 use std::string::String;
 
-use ptools::constants::FUEL_BASE_ASSET;
-use ::gas_sponsor_tools_v3::*;
-use bignum::{
-    wei_to_eth::wei_to_eth,
-    add::*,
-    overflow::*,
-    hex::{
-        b256_to_hex,
-        u256_to_hex,
-    },
-};
+use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
+use ::gas_sponsor_tools::*;
+use ::overflow::*;
 
 
-/// Structure representing and input or output from
+/// General struct with either input or output details from
 /// transaction data.
 ///
-/// # Additional Information
-///
-/// Used to track assets, amounts, and ownership for transaction validation.
 pub struct InpOut {
     /// Asset identifier
     pub assetid: b256,
@@ -47,7 +36,6 @@ impl InpOut {
         }
     }
 }
-
 
 /// Checks if an asset ID is present in `tx_inputs`. If found, returns
 /// the owner address of the first occurrence of this input.
@@ -84,7 +72,6 @@ pub fn get_gas_utxo(
 
     (utxo_found, utxo_owner, utxoid)
 }
-
 
 /// Verifies that there exists a change output for the exptected asset that is addressed to a receiver.
 ///
@@ -139,30 +126,12 @@ pub fn calcualte_asset_within_tolerance(
     let upper_bound_bn = expected_amount_bn + tolerance_amount_bn;
     let lower_bound_bn = if expected_amount_bn > tolerance_amount_bn { expected_amount_bn - tolerance_amount_bn } else { 0 };
     let upperb_ovf = is_overflow_u64(upper_bound_bn);
-        /*
-        //--------------------------------------------------------------------------------------
-        // DEBUG:
-        log(String::from_ascii_str("----------------------------------------------- Tolerance bn:"));
-        log(String::from_ascii_str("(actual/ tolerance_bn /upper_bound_bn /lower_bound_bn) -> bn:"));
-        log(u256_to_hex(actual_amount_bn));
-        log(u256_to_hex(tolerance_amount_bn));
-        log(u256_to_hex(upper_bound_bn));
-        log(u256_to_hex(lower_bound_bn));
 
-        log(String::from_ascii_str("upper bound ovf?"));
-        if upperb_ovf {
-            log(String::from_ascii_str("true"));
-        } else {
-            log(String::from_ascii_str("false"));
-        }
-        //--------------------------------------------------------------------------------------
-        */
     if actual_amount_bn < lower_bound_bn || actual_amount_bn > upper_bound_bn {
         return false;
     }
     return true;
 }
-
 
 /// Process outputs for the "sponsor" command, validating gas returns and asset exchange.
 ///
@@ -195,7 +164,7 @@ pub fn process_output_assets_command_sponsor(
     expected_other_amount: u256,        // Other_Asset amount expected to be output
     tolerance_bps_u256: u256,           // Tolerance in basis points (1 bps = 0.01%)
     sponsor_addr: b256,                 // propagate from get_gas_utxo()
-    expected_gas_return_amount: u256,   // gas amount the sponsor explicitly wants back.
+    _expected_gas_return_amount: u256,   // gas amount the sponsor explicitly wants back.
     gas_utxo_in: b256,
 ) -> Result<GasSponsor, u64> {
 
@@ -211,23 +180,12 @@ pub fn process_output_assets_command_sponsor(
         if output.assetid == FUEL_BASE_ASSET {
             match output.amount {
                 Some(amount) => {
-                    // dont bother checking if the amount is the exptected amount, let
-                    // the GasSponsor struct check if the output amount was what was
-                    // signed by the sponsor.
+                    // We dont bother checking if the amount is the exptected amount,
+                    // `expected_gas_return_amount`, instead let the GasSponsor struct
+                    // check if the output amount was what was signed by the sponsor.
                     // check if the owner is correct before assigning the value.
-
-                    // log(String::from_ascii_str("------- ACTUAL gas output amount:"));
-                    // let debug_aoa = asm(r1: (0, 0, 0, amount)) { r1: u256 };
-                    // log(u256_to_hex(debug_aoa));
-
                     match output.owner {
                         Some(owner) => {
-
-                            // log(String::from_ascii_str("owner"));
-                            // log(b256_to_hex(owner.into()));
-                            // log(String::from_ascii_str("------- --------------------------"));
-
-
                             if owner == Address::from(sponsor_addr) {
                                 actual_gas_output_amount = asm(r1: (0, 0, 0, amount)) { r1: u256 };
                             }
@@ -271,39 +229,22 @@ pub fn process_output_assets_command_sponsor(
     let (_, _, _, expected_amount): (u64, u64, u64, u64) = asm(r1: expected_other_amount) { r1: (u64, u64, u64, u64) };
 
     // Ensure other_asset output amount is within tolerance
-    let other_asset_ok = calcualte_asset_within_tolerance(
+    if !calcualte_asset_within_tolerance(
         actual_other_amount,
         expected_amount,
         tolerance_bps_u256
-    );
-    //TODO - can just do: if !calcualte_asset_within_tolerance(...) { return Err(7062u64); }
-    if !other_asset_ok {
+    ) {
         return Err(7062u64);
     }
 
     // Ensure gas output change for is directed to sponsor address
-    let gas_change_ok = verify_change_output(
+    if !verify_change_output(
         tx_change_assets,
         FUEL_BASE_ASSET,
         Address::from(sponsor_addr)
-    );
-    //TODO - can just do: if !verify_change_output(...) { return Err(7063u64); }
-    if !gas_change_ok {
+    ) {
         return Err(7063u64);
     }
-        /*
-        //--------------------------------------------------------------------------------------
-        // DEBUG:
-        log(String::from_ascii_str("--------------------------- actual gas output amount:"));
-        log(u256_to_hex(actual_gas_output_amount));
-        log(String::from_ascii_str("--------------------------- other asset within bounds?:"));
-        if other_asset_ok {
-            log(String::from_ascii_str("true"));
-        } else {
-            log(String::from_ascii_str("false"));
-        }
-        //--------------------------------------------------------------------------------------
-        */
 
     Ok(GasSponsor::new(
         String::from_ascii_str("sponsor"),
@@ -315,7 +256,6 @@ pub fn process_output_assets_command_sponsor(
         tolerance_bps_u256
     ))
 }
-
 
 /// Process outputs for the "gaspass" command, validating only gas returns.
 ///
@@ -339,8 +279,8 @@ pub fn process_output_assets_command_sponsor(
 pub fn process_output_assets_command_gaspass(
     tx_output_assets: Vec<InpOut>,
     tx_change_assets: Vec<InpOut>,
-    sponsor_addr: b256,                 // propagate from get_gas_utxo()
-    expected_gas_return_amount: u256,   // gas amount the sponsor explicitly wants back.
+    sponsor_addr: b256,                     // propagated from get_gas_utxo()
+    _expected_gas_return_amount: u256,
     gas_utxo_in: b256,
 ) -> Result<GasSponsor, u64> {
 
@@ -354,9 +294,10 @@ pub fn process_output_assets_command_gaspass(
                 Some(amount) => {
                     match output.owner {
                         Some(owner) => {
-
+                            // dont need to check `expected_gas_return_amount` as
+                            // actual_gas_output_amount is fd into the verifying
+                            // stuct.
                             if owner == Address::from(sponsor_addr) {
-                                // sponsor_gas_output_found = true;
                                 actual_gas_output_amount = asm(r1: (0, 0, 0, amount)) { r1: u256 };
                             }
                         },
@@ -380,18 +321,11 @@ pub fn process_output_assets_command_gaspass(
         FUEL_BASE_ASSET,
         Address::from(sponsor_addr)
     );
-    //TODO - can just do: if !verify_change_output(...) { return Err(7063u64); }
+
+    // If the no gas change then fail
     if !gas_change_ok {
         return Err(7063u64);
     }
-        /*
-        //--------------------------------------------------------------------------------------
-        // DEBUG:
-        log(String::from_ascii_str("--------------------------- actual gas output amount:"));
-        log(u256_to_hex(actual_gas_output_amount));
-
-        //--------------------------------------------------------------------------------------
-        */
 
     Ok(GasSponsor::new(
         String::from_ascii_str("gaspass"),
