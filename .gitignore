@@ -1,3 +1,5 @@
 # Forc's build directory
 out
 target
+
+count.sh
