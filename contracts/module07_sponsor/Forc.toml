@@ -1,0 +1,12 @@
+[project]
+authors = ["Antony <antony@l3labs.org>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "module07_sponsor"
+
+[dependencies]
+zap_utils = { path = "../lib/zap_utils" }
+zapwallet_consts = { path = "../zapwallet_consts" }
+module07_utils = { path = "../lib/module07_utils" }
+standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.6.3" }
+

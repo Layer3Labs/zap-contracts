@@ -6,6 +6,7 @@ members = [
   "module03_erc20",
   "module04_txidwit",
   # "module05_eip712_simple",
+  "module07_sponsor",
   "master",
   "zap_manager",
   # "tests",
