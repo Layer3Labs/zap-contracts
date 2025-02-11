@@ -275,11 +275,6 @@ impl ZapManager for Contract {
                 // Generate unique key for this wallet (sha256(evm_addr || master_addr))
                 let key = get_key1(owner_evm_addr, master_addr);
 
-                //REVIEW - DEBUG
-                // log(String::from_ascii_str("key:"));
-                // log(b256_to_hex(key));
-
-
                 // Check for existing nonce asset to prevent double initialization
                 require(
                     !check_initialized(key),
@@ -480,7 +475,7 @@ impl ZapManager for Contract {
     ) {
         // Status checks
         require(!_is_paused(), "Contract is paused");
-        // require(storage.can_upgrade.read(), "Upgrades are not enabled");
+        require(storage.can_upgrade.read(), "Upgrades are not enabled");
 
         // Get nonce asset ID for this wallet
         let nonce_assetid: b256 = get_module_assetid(owner_evm_addr, KEY_NONCE).into();

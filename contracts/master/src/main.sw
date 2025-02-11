@@ -1,8 +1,6 @@
 predicate;
 
 use std::{
-    // b512::B512,
-    // bytes::Bytes,
     inputs::{
         input_coin_owner,
         input_count,
