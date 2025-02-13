@@ -35,10 +35,7 @@ pub fn mint_nonce_asset(
     let mut mint_amount: u64 = NONCE_MAX;
     mint(sub_id, mint_amount);
 
-    (
-        (NONCE_MAX - 1),
-        AssetId::new(ContractId::this(), sub_id)
-    )
+    ( (NONCE_MAX - 1), AssetId::new(ContractId::this(), sub_id) )
 }
 
 pub fn mint_module_asset(
@@ -62,11 +59,7 @@ pub fn mint_module_asset(
     let mut mint_amount: u64 = 1;
     mint(sub_id, mint_amount);
 
-    transfer(
-        Identity::Address(module_addr),    // send to the Module Address.
-        AssetId::new(ContractId::this(), sub_id),
-        mint_amount      // send the unit amount to the Module Address.
-    );
+    transfer( Identity::Address(module_addr), AssetId::new(ContractId::this(), sub_id), mint_amount );
 
 }
 
@@ -76,9 +69,7 @@ pub fn get_sub_id(
 ) -> b256 {
 
     let mut result_buffer = b256::zero();
-    asm(n_id: result_buffer, ptr: (evm_addr, key), bytes: 64) {
-        s256 n_id ptr bytes;
-    };
+    asm(n_id: result_buffer, ptr: (evm_addr, key), bytes: 64) { s256 n_id ptr bytes; };
 
     return(result_buffer);
 }
@@ -101,9 +92,7 @@ pub fn get_key1(
 ) -> b256 {
 
     let mut result_buffer = b256::zero();
-    asm(n_id: result_buffer, ptr: (evm_addr, master_addr), bytes: 64) {
-        s256 n_id ptr bytes;
-    };
+    asm(n_id: result_buffer, ptr: (evm_addr, master_addr), bytes: 64) { s256 n_id ptr bytes; };
 
     return(result_buffer);
 }

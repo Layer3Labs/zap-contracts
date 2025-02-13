@@ -19,30 +19,11 @@ use std::{
 use std::*;
 use std::bytes_conversions::u64::*;
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
-use standards::{
-    src16::{
-        SRC16Base,
-        EIP712,
-        EIP712Domain,
-        DomainHash,
-        TypedDataHash,
-        DataEncoder,
-        SRC16Payload,
-        SRC16Encode,
-    },
-};
+use standards::{ src16::{ SRC16Base, EIP712, EIP712Domain, DomainHash, TypedDataHash, DataEncoder, SRC16Payload, SRC16Encode } };
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 use zap_utils::{
     rlp_helpers::bytes_read_b256,
-    transaction_utls::{
-        input_coin_amount,
-        input_coin_asset_id,
-        output_coin_asset_id,
-        verify_input_coin,
-        verify_input_contract,
-        verify_output_change,
-        input_txn_hash,
-    },
+    transaction_utls::{ input_coin_amount, input_coin_asset_id, output_coin_asset_id, verify_input_coin, verify_input_contract, verify_output_change, input_txn_hash, },
 };
 
 
@@ -70,13 +51,7 @@ pub struct Initialization {
 
 impl Initialization {
 
-    pub fn new(
-        command: String,
-        evmaddr: b256,
-        utxoid: b256,
-    ) -> Initialization {
-        Initialization { command, evmaddr, utxoid }
-    }
+    pub fn new( command: String, evmaddr: b256, utxoid: b256, ) -> Initialization { Initialization { command, evmaddr, utxoid } }
 
 }
 
@@ -96,19 +71,10 @@ impl TypedDataHash for Initialization {
 
     fn struct_hash(self) -> b256 {
         let mut encoded = Bytes::new();
-        encoded.append(
-            INITIALIZE_ZAPWALLET_TYPE_HASH.to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_string(self.command).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.evmaddr).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.utxoid).to_be_bytes()
-        );
-
+        encoded.append( INITIALIZE_ZAPWALLET_TYPE_HASH.to_be_bytes() );
+        encoded.append( DataEncoder::encode_string(self.command).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.evmaddr).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.utxoid).to_be_bytes() );
         keccak256(encoded)
     }
 }
@@ -120,10 +86,7 @@ impl SRC16Encode<Initialization> for Initialization {
         // encodeData hash
         let data_hash = s.struct_hash();
         // setup payload
-        let payload = SRC16Payload {
-            domain: _get_domain_separator(),
-            data_hash: data_hash,
-        };
+        let payload = SRC16Payload { domain: _get_domain_separator(), data_hash: data_hash, };
 
         // Get the final encoded hash
         match payload.encode_hash() {
@@ -137,12 +100,7 @@ fn _get_domain_separator() -> EIP712Domain {
 
     let verifying_contract: b256 = 0x0000000000000000000000000000000000000000000000000000000000000001;
 
-    EIP712Domain::new(
-        String::from_ascii_str("ZapWallet"),
-        String::from_ascii_str("1"),
-        (asm(r1: (0, 0, 0, 9889)) { r1: u256 }),
-        verifying_contract.into()
-    )
+    EIP712Domain::new( String::from_ascii_str("ZapWallet"), String::from_ascii_str("1"), (asm(r1: (0, 0, 0, 9889)) { r1: u256 }), verifying_contract.into() )
 }
 
 /// Validates the initialization transaction structure and signature.
@@ -172,11 +130,7 @@ pub fn verify_init_struct(in_count: u64, out_count: u64, op: WalletOp, owner_add
         let (cs_rhs, _ptr) = bytes_read_b256(op.compsig, ptr, 32);
         let compactsig = B512::from((cs_lhs, cs_rhs));
 
-        let init = Initialization::new(
-            String::from_ascii_str("ZapWalletInitialize"),
-            op.evm_addr,
-            utxoid,
-        );
+        let init = Initialization::new( String::from_ascii_str("ZapWalletInitialize"), op.evm_addr, utxoid, );
         let encoded_hash = Initialization::encode(init);
         let recovered_signer: b256 = ec_recover_evm_address(compactsig, encoded_hash).unwrap().into();
 
@@ -225,9 +179,7 @@ pub fn check_inputs(in_count: u64) -> (bool, b256, b256) {
         // Check for contract input
         else if verify_input_contract(i) {
             // Return false if we already found a contract input
-            if contract_found {
-                return (false, b256::zero(), b256::zero());
-            }
+            if contract_found { return (false, b256::zero(), b256::zero()); }
             contract_found = true;
         }
         i += 1;

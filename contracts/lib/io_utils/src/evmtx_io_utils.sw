@@ -21,10 +21,7 @@ use zap_utils::{
 ///   - 2070: No valid amount provided for nonce asset
 ///   - 2071: Correct nonce asset/value combination not found
 ///
-pub enum NonceCheckResult {
-    Success: (u64, Address),
-    Fail: (u64),
-}
+pub enum NonceCheckResult { Success: (u64, Address), Fail: (u64),}
 
 /// Checks the nonce asset and value in the input assets.
 ///
@@ -46,11 +43,7 @@ pub enum NonceCheckResult {
 ///   - `2070`: No valid amount provided for the nonce asset.
 ///   - `2071`: The correct nonce asset/value combination was not found.
 ///
-pub fn nonce_check(
-    tx_inputs: Vec<InpOut>,
-    nonce_assetid: b256,
-    expected_nonce_val: u64,
-) -> NonceCheckResult {
+pub fn nonce_check( tx_inputs: Vec<InpOut>, nonce_assetid: b256, expected_nonce_val: u64, ) -> NonceCheckResult {
     let mut nonce_ok = false;
     let mut nonce_idx = 0u64;
     let mut i = 0;
@@ -99,10 +92,7 @@ pub fn nonce_check(
 /// * `Fail(u64)` - Contains an error code indicating why aggregation failed:
 ///   - 2066: No valid amount provided for FUEL_BASE_ASSET input
 ///
-pub enum AggregateResult {
-    Success: (u256, Address, bool),
-    Fail: (u64),
-}
+pub enum AggregateResult { Success: (u256, Address, bool), Fail: (u64),}
 
 /// Aggregates a single asset and their amounts from a vector of InpOut structures.
 ///
@@ -127,12 +117,7 @@ pub enum AggregateResult {
 ///   - A boolean indicating whether all input assets are of type FUEL_BASE_ASSET and have the same owner.
 /// * AggregateResult::Fail - If the aggregation fails, returns an error code (u64).
 ///
-pub fn aggregate_single_asset(
-    tx_inputs: Vec<InpOut>,
-    nonce_asset: b256,
-    nonce_owner: Address,
-    module_asset: b256,
-) -> AggregateResult {
+pub fn aggregate_single_asset( tx_inputs: Vec<InpOut>, nonce_asset: b256, nonce_owner: Address, module_asset: b256,) -> AggregateResult {
     let mut aggregated_amount = u256::zero();
     let mut all_same_type = true;
     let mut all_same_owner = true;
@@ -196,11 +181,7 @@ pub fn aggregate_single_asset(
 ///
 /// * `bool`: Returns `true` if a matching change output is found for the asset/receiver, `false` otherwise.
 ///
-pub fn verify_change_output(
-    tx_change_assets: Vec<InpOut>,
-    expected_change_asset: b256,
-    expected_change_receiver: Address,
-) -> bool {
+pub fn verify_change_output( tx_change_assets: Vec<InpOut>, expected_change_asset: b256, expected_change_receiver: Address,) -> bool {
     // Check each InpOut struct for matching asset and receiver
     for change in tx_change_assets.iter() {
         if change.assetid == expected_change_asset {
@@ -237,11 +218,7 @@ pub fn verify_change_output(
 /// 2. Calculating the master address from the modified bytecode.
 /// 3. Comparing the calculated master address with the receiving address.
 ///
-pub fn verify_receiver(
-    ref mut receiver_code: Bytes,
-    receiver_evm_addr: b256,
-    receiving_addr: b256,
-) -> bool {
+pub fn verify_receiver( ref mut receiver_code: Bytes, receiver_evm_addr: b256, receiving_addr: b256,) -> bool {
 
     // Calculate the v1 predicate address
     let v1_predicate = V1Predicate::new();

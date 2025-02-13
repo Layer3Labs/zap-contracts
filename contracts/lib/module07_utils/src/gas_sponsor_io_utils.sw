@@ -22,19 +22,7 @@ pub struct InpOut {
 }
 
 impl InpOut {
-    pub fn new(
-        assetid: b256,
-        amountu64: Option<u64>,
-        uxtoid: Option<b256>,
-        owner: Option<Address>,
-    ) -> InpOut {
-        InpOut {
-            assetid: assetid,
-            amount: amountu64,
-            uxtoid: uxtoid,
-            owner: owner,
-        }
-    }
+    pub fn new( assetid: b256, amountu64: Option<u64>, uxtoid: Option<b256>, owner: Option<Address> ) -> InpOut { InpOut { assetid: assetid, amount: amountu64, uxtoid: uxtoid, owner: owner, } }
 }
 
 /// Checks if an asset ID is present in `tx_inputs`. If found, returns
@@ -51,10 +39,7 @@ impl InpOut {
 /// * [Address] - The address of the input owner if the target asset is found.
 /// * [b256] - The UTXO ID of the gas input.
 ///
-pub fn get_gas_utxo(
-    tx_inputs: Vec<InpOut>,
-    target_asset: b256,
-) -> (bool, Address, b256) {
+pub fn get_gas_utxo( tx_inputs: Vec<InpOut>, target_asset: b256,) -> (bool, Address, b256) {
     let mut utxo_found = false;
     let mut utxo_owner = Address::zero();
     let mut utxoid = b256::zero();
@@ -85,11 +70,7 @@ pub fn get_gas_utxo(
 ///
 /// * `bool`: Returns `true` if a matching change output is found for the asset/receiver, `false` otherwise.
 ///
-pub fn verify_change_output(
-    tx_change_assets: Vec<InpOut>,
-    expected_change_asset: b256,
-    expected_change_receiver: Address,
-) -> bool {
+pub fn verify_change_output( tx_change_assets: Vec<InpOut>, expected_change_asset: b256, expected_change_receiver: Address, ) -> bool {
     // Check each InpOut struct for matching asset and receiver
     for change in tx_change_assets.iter() {
         if change.assetid == expected_change_asset {
@@ -113,11 +94,7 @@ pub fn verify_change_output(
 /// Tolerance in basis points (1 bps = 0.01%, 10000 bps = 100%)
 /// Do any calculations for tolerance in bn, using U256 arithmetic.
 ///
-pub fn calcualte_asset_within_tolerance(
-    actual_amount: u64,
-    expected_amount: u64,
-    tolerance: u256,
-) -> bool {
+pub fn calcualte_asset_within_tolerance( actual_amount: u64, expected_amount: u64, tolerance: u256, ) -> bool {
 
     let actual_amount_bn = asm(r1: (0, 0, 0, actual_amount)) { r1: u256 };
 
@@ -157,16 +134,7 @@ pub fn calcualte_asset_within_tolerance(
 /// * When other asset amount is outside tolerance (7062)
 /// * When gas change output is invalid (7063)
 ///
-pub fn process_output_assets_command_sponsor(
-    tx_output_assets: Vec<InpOut>,
-    tx_change_assets: Vec<InpOut>,
-    expected_other_asset: b256,         // the Other_Asset assetid
-    expected_other_amount: u256,        // Other_Asset amount expected to be output
-    tolerance_bps_u256: u256,           // Tolerance in basis points (1 bps = 0.01%)
-    sponsor_addr: b256,                 // propagate from get_gas_utxo()
-    _expected_gas_return_amount: u256,   // gas amount the sponsor explicitly wants back.
-    gas_utxo_in: b256,
-) -> Result<GasSponsor, u64> {
+pub fn process_output_assets_command_sponsor( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, expected_other_asset: b256, expected_other_amount: u256, tolerance_bps_u256: u256, sponsor_addr: b256, _expected_gas_return_amount: u256, gas_utxo_in: b256,) -> Result<GasSponsor, u64> {
 
     // let mut sponsor_gas_output_found = true;
     let mut actual_gas_output_amount = asm(r1: (0, 0, 0, 0)) { r1: u256 };
@@ -208,9 +176,7 @@ pub fn process_output_assets_command_sponsor(
                 Some(amount) => {
                     match output.owner {
                         Some(owner) => {
-                            if owner == Address::from(sponsor_addr) {
-                                actual_other_amount = amount;
-                            }
+                            if owner == Address::from(sponsor_addr) { actual_other_amount = amount; }
                         },
                         None => {
                             // other_asset output owner not found
@@ -229,32 +195,12 @@ pub fn process_output_assets_command_sponsor(
     let (_, _, _, expected_amount): (u64, u64, u64, u64) = asm(r1: expected_other_amount) { r1: (u64, u64, u64, u64) };
 
     // Ensure other_asset output amount is within tolerance
-    if !calcualte_asset_within_tolerance(
-        actual_other_amount,
-        expected_amount,
-        tolerance_bps_u256
-    ) {
-        return Err(7062u64);
-    }
+    if !calcualte_asset_within_tolerance( actual_other_amount, expected_amount, tolerance_bps_u256 ) { return Err(7062u64); }
 
     // Ensure gas output change for is directed to sponsor address
-    if !verify_change_output(
-        tx_change_assets,
-        FUEL_BASE_ASSET,
-        Address::from(sponsor_addr)
-    ) {
-        return Err(7063u64);
-    }
+    if !verify_change_output( tx_change_assets, FUEL_BASE_ASSET, Address::from(sponsor_addr) ) { return Err(7063u64); }
 
-    Ok(GasSponsor::new(
-        String::from_ascii_str("sponsor"),
-        sponsor_addr,
-        gas_utxo_in,
-        actual_gas_output_amount,
-        expected_other_asset,
-        expected_other_amount,
-        tolerance_bps_u256
-    ))
+    Ok(GasSponsor::new( String::from_ascii_str("sponsor"), sponsor_addr, gas_utxo_in, actual_gas_output_amount, expected_other_asset, expected_other_amount, tolerance_bps_u256 ))
 }
 
 /// Process outputs for the "gaspass" command, validating only gas returns.

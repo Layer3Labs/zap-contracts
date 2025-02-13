@@ -36,13 +36,9 @@ pub enum ModuleCheckResult {
 ///
 pub fn module_check_controller(values: Vec<bool>) -> ModuleCheckResult {
 
-    if any_check(values) {
-        return ModuleCheckResult::Init;
-    }
+    if any_check(values) { return ModuleCheckResult::Init; }
 
-    if check_upgrade_case(values) {
-        return ModuleCheckResult::Upgrade;
-    }
+    if check_upgrade_case(values) { return ModuleCheckResult::Upgrade; }
 
     if xor_check(values) {
         let position = check_position(values).unwrap();

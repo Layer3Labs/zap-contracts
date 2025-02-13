@@ -1,30 +1,11 @@
 predicate;
 
-use std::{
-    inputs::{
-        input_coin_owner,
-        input_count,
-        Input,
-    },
-    outputs::{
-        output_asset_to,
-        output_amount,
-        output_count,
-        Output,
-    },
-};
+use std::{ inputs::{ input_coin_owner, input_count, Input },  outputs::{ output_asset_to, output_amount, output_count, Output } };
 use std::*;
 use std::bytes_conversions::u64::*;
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 use zapwallet_consts::wallet_consts::{NUM_MODULES, FUEL_BASE_ASSET};
-use zap_utils::{
-    transaction_utls::{
-        input_coin_asset_id,
-        output_coin_asset_id,
-        verify_input_coin,
-        verify_output_coin,
-    },
-};
+use zap_utils::{ transaction_utls::{ input_coin_asset_id, output_coin_asset_id, verify_input_coin, verify_output_coin, } };
 use master_utils::initialize::*;
 use master_utils::module::*;
 use master_utils::module_check::*;
@@ -81,17 +62,7 @@ configurable {
 fn main( op: Option<WalletOp> ) -> bool {
 
     // Setup wallet module from precalculated modules details.
-    let walletmodules = setup_walletmodues(
-        ASSET_KEY00, MODULE00_ADDR,
-        ASSET_KEY01, MODULE01_ADDR,
-        ASSET_KEY02, MODULE02_ADDR,
-        ASSET_KEY03, MODULE03_ADDR,
-        ASSET_KEY04, MODULE04_ADDR,
-        ASSET_KEY05, MODULE05_ADDR,
-        ASSET_KEY06, MODULE06_ADDR,
-        ASSET_KEY07, MODULE07_ADDR,
-        ASSET_KEY08, MODULE08_ADDR,
-    );
+    let walletmodules = setup_walletmodues( ASSET_KEY00, MODULE00_ADDR, ASSET_KEY01, MODULE01_ADDR, ASSET_KEY02, MODULE02_ADDR, ASSET_KEY03, MODULE03_ADDR, ASSET_KEY04, MODULE04_ADDR, ASSET_KEY05, MODULE05_ADDR, ASSET_KEY06, MODULE06_ADDR, ASSET_KEY07, MODULE07_ADDR, ASSET_KEY08, MODULE08_ADDR, );
 
     // Critial bools for validation success.
     let mut all_checks: bool = false;
@@ -115,10 +86,7 @@ fn main( op: Option<WalletOp> ) -> bool {
             let coin_owner = input_coin_owner(i).unwrap();
             // Copy the assetid and owner and attempt to match to a
             // known module
-            let potentialmodule = Module {
-                assetid: coin_asset_id,
-                address: coin_owner,
-            };
+            let potentialmodule = Module { assetid: coin_asset_id, address: coin_owner };
 
             if let Some(index) = match_module(potentialmodule, walletmodules) {
                 assert(found_modules.get(index).unwrap() != true);
@@ -136,11 +104,7 @@ fn main( op: Option<WalletOp> ) -> bool {
         // collect all the output coins
         if verify_output_coin(j) {
 
-            let outp = InpOut {
-                assetid: output_coin_asset_id(j).unwrap(),
-                amount: output_amount(j),
-                owner_to: output_asset_to(j),
-            };
+            let outp = InpOut { assetid: output_coin_asset_id(j).unwrap(), amount: output_amount(j), owner_to: output_asset_to(j) };
             tx_outputs.push(outp);
         }
         j += 1;

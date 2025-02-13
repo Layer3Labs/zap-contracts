@@ -5,18 +5,10 @@ mod tools;
 pub mod manager;
 mod events;
 
-use std::{
-    bytes::Bytes,
-    b512::B512,
-    string::String,
-    option::Option::{self, *},
-    hash::*,
-    storage::storage_vec::*,
-    vm::evm::evm_address::EvmAddress,
+use std::{ bytes::Bytes, b512::B512, string::String, option::Option::{self, *}, hash::*,
+    storage::storage_vec::*, vm::evm::evm_address::EvmAddress,
     context::{this_balance, balance_of},
-    asset::*,
-    contract_id::*,
-    asset::mint_to,
+    asset::*, contract_id::*, asset::mint_to,
 };
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 use std::bytes_conversions::{b256::*, u64::*};
@@ -25,24 +17,10 @@ use standards::src5::{SRC5, State, AccessError};
 use zapwallet_consts::wallet_consts::NUM_MODULES;
 use io_utils::io::find_utxoid_and_owner_by_asset;
 use zap_utils::hex::b256_to_hex;
-use constants::{
-    KEY00, KEY01, KEY02, KEY03, KEY04, KEY05, KEY06, KEY07, KEY08,
-    KEY_NONCE, NONCE_MAX,
-};
-use tools::{
-    mint_nonce_asset,
-    mint_module_asset,
-    get_sub_id,
-    get_module_assetid,
-    get_key1,
-};
+use constants::{ KEY00, KEY01, KEY02, KEY03, KEY04, KEY05, KEY06, KEY07, KEY08, KEY_NONCE, NONCE_MAX };
+use tools::{ mint_nonce_asset, mint_module_asset, get_sub_id, get_module_assetid, get_key1 };
 use ::manager::{ZapManager, InitData};
-use ::events::{
-    ContractStateEvent,
-    InitializeWalletEvent,
-    WalletVersionsEvent,
-    UpgradeEvent,
-};
+use ::events::{ ContractStateEvent, InitializeWalletEvent, WalletVersionsEvent, UpgradeEvent };
 
 
 /// The owner of this contract at deployment.
@@ -70,9 +48,7 @@ storage {
 
 impl SRC5 for Contract {
     #[storage(read)]
-    fn owner() -> State {
-        storage.owner.read()
-    }
+    fn owner() -> State { storage.owner.read() }
 }
 
 impl Pausable for Contract {
@@ -89,9 +65,7 @@ impl Pausable for Contract {
     }
 
     #[storage(read)]
-    fn is_paused() -> bool {
-        _is_paused()
-    }
+    fn is_paused() -> bool { _is_paused() }
 }
 
 
@@ -259,11 +233,7 @@ impl ZapManager for Contract {
     ///   * is_base_modules: true for InitModules, false for NewModule
     ///
     #[storage(read, write)]
-    fn initialize_wallet(
-        master_addr: Address,
-        owner_evm_addr: EvmAddress,
-        initdata: InitData,
-    ) -> EvmAddress {
+    fn initialize_wallet( master_addr: Address, owner_evm_addr: EvmAddress, initdata: InitData, ) -> EvmAddress {
         // Contract pause check
         require(!_is_paused(), "Contract is paused");
 
@@ -286,11 +256,7 @@ impl ZapManager for Contract {
                 storage.v1_map.insert(key, nonce_assetid);
 
                 // Transfer nonce asset to provided master address
-                transfer(
-                    Identity::Address(master_addr),
-                    nonce_assetid,
-                    nonce_tfr_amt
-                );
+                transfer( Identity::Address(master_addr), nonce_assetid, nonce_tfr_amt);
 
                 // Mint and transfer all base module assets to provided module addresses
                 let module_addrs = base_mods.module_addrs;
@@ -303,11 +269,7 @@ impl ZapManager for Contract {
                 }
 
                 // Emit initialization event
-                InitializeWalletEvent::new(
-                    master_addr,
-                    owner_evm_addr,
-                    true  // Full initialization
-                ).log();
+                InitializeWalletEvent::new( master_addr, owner_evm_addr, true).log();
             },
             InitData::NewModule(module) => {
                 // The asset for `key` should be sent to the provided module address.
@@ -337,11 +299,7 @@ impl ZapManager for Contract {
                 mint_module_asset(owner_evm_addr, key, Address::from(module_addr));
 
                 // Emit the module mint event
-                InitializeWalletEvent::new(
-                    master_addr,
-                    owner_evm_addr,
-                    false  // false indicates this was not a full initialization
-                ).log();
+                InitializeWalletEvent::new( master_addr, owner_evm_addr, false).log();
             },
 
 
@@ -375,10 +333,7 @@ impl ZapManager for Contract {
     /// * Reads: 1 (storage lookup via check_initialized)
     ///
     #[storage(read)]
-    fn initialized(
-        master_address: Address,
-        evm_addr: EvmAddress,
-    ) -> bool {
+    fn initialized( master_address: Address, evm_addr: EvmAddress,) -> bool {
 
         let key = get_key1(evm_addr, master_address);
 
@@ -406,10 +361,7 @@ impl ZapManager for Contract {
     /// * `WalletVersionsEvent`: Emitted with the new version strings and sender identity
     ///
     #[storage(read, write)]
-    fn set_zapwallet_versions(
-        v1_version: str[5],
-        v2_version: str[5],
-    ) {
+    fn set_zapwallet_versions( v1_version: str[5], v2_version: str[5],) {
         // Only owner can set versions
         require_owner();
 
@@ -418,11 +370,7 @@ impl ZapManager for Contract {
         storage.v2_version.write(v2_version);
 
         // Emit version update event
-        WalletVersionsEvent::new(
-            v1_version,
-            v2_version,
-            msg_sender().unwrap()
-        ).log();
+        WalletVersionsEvent::new( v1_version, v2_version, msg_sender().unwrap()).log();
     }
 
     /// Returns the current version strings for V1 and V2 ZapWallet implementations.
@@ -469,10 +417,7 @@ impl ZapManager for Contract {
     /// * `UpgradeEvent`: Emitted with upgrade details including owner and asset verification
     ///
     #[storage(read), payable]
-    fn upgrade(
-        owner_evm_addr: EvmAddress,
-        sponsored: bool,
-    ) {
+    fn upgrade( owner_evm_addr: EvmAddress, sponsored: bool ) {
         // Status checks
         require(!_is_paused(), "Contract is paused");
         require(storage.can_upgrade.read(), "Upgrades are not enabled");
@@ -483,28 +428,17 @@ impl ZapManager for Contract {
         // Find the nonce owner (master address) from inputs
         let (_, nonce_owner) = match find_utxoid_and_owner_by_asset(nonce_assetid) {
             Some((_, owner)) => (b256::zero(), owner),
-            None => {
-                // Nonce asset not found in inputs
-                revert(1001u64)
-            },
+            None => { revert(1001u64) },
         };
 
 
         // Verify nonce asset matches stored mapping
         let key = get_key1(owner_evm_addr, nonce_owner);
         let storage_nonce_assetid = storage.v1_map.get(key).read();
-        require(
-            AssetId::from(nonce_assetid) == storage_nonce_assetid,
-            "Nonce asset mismatch with stored mapping"
-        );
+        require( AssetId::from(nonce_assetid) == storage_nonce_assetid, "Nonce asset mismatch with stored mapping");
 
         // Emit upgrade verification and status
-        UpgradeEvent::new(
-            owner_evm_addr,            // Owner being upgraded
-            nonce_owner,               // Master address verified
-            sponsored,                 // Upgrade gas payment type
-            storage_nonce_assetid,     // Verified nonce asset
-        ).log();
+        UpgradeEvent::new( owner_evm_addr, nonce_owner, sponsored, storage_nonce_assetid,).log();
     }
 
     /// Checks if a wallet has successfully upgraded by verifying the balance
@@ -564,9 +498,7 @@ impl ZapManager for Contract {
 ///     key = sha256(evm_addr || master_addr)
 ///
 #[storage(read)]
-fn check_initialized(
-    key: b256,
-) -> bool {
+fn check_initialized( key: b256 ) -> bool {
     // Check if the key exists in storage first
     if let Some(storage_nonce_assetid) = storage.v1_map.get(key).try_read() {
         // If we found an assetid in storage, check its balance.

@@ -1,32 +1,10 @@
 library;
 
-use std::{
-    b512::B512,
-    hash::*,
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    bytes::Bytes,
-    math::*,
-    option::Option,
-    string::String,
-};
+use std::{ b512::B512, hash::*, vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress, }, bytes::Bytes, math::*, option::Option, string::String,};
 use std::*;
 use std::bytes_conversions::u64::*;
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
-
-use ::rlp_utls6::{
-    convert_u8_u64,
-    rlp_decode_payload,
-    length_to_digest,
-    rlp_decode_item,
-    rlp_read_u64,
-    rlp_read_b256,
-    rlp_read_bytes_to_u256,
-    compact_signature_normalize,
-    RLP_PAYLOAD_IDENTIFIER_IMMEDIATE_START,
-};
+use ::rlp_utls6::{ convert_u8_u64, rlp_decode_payload, length_to_digest, rlp_decode_item, rlp_read_u64, rlp_read_b256, rlp_read_bytes_to_u256, compact_signature_normalize, RLP_PAYLOAD_IDENTIFIER_IMMEDIATE_START };
 
 pub enum DecodeType02RLPResult {
     Success: (
@@ -174,22 +152,7 @@ pub fn decode_signed_typedtx_1559(signed_tx: Bytes) -> DecodeType02RLPResult {
     let sig = compact_signature_normalize(r, s, v);
     let from: b256 = ec_recover_evm_address(sig, digest).unwrap().into();
 
-    DecodeType02RLPResult::Success((
-        type_identifier,
-        chain_id,
-        nonce,
-        maxFeePerGas,
-        gasLimit,
-        value,
-        to,
-        asset_id,
-        digest,
-        len,
-        ptr_tx_data_start,
-        ptr_tx_data_end,
-        sig,
-        from,
-    ))
+    DecodeType02RLPResult::Success(( type_identifier, chain_id, nonce, maxFeePerGas, gasLimit, value, to, asset_id, digest, len, ptr_tx_data_start, ptr_tx_data_end, sig, from, ))
 }
 
 /// Computes the digest of a signed TypedTransaction EIP-1559 (type 2).

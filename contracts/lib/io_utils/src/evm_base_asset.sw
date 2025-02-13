@@ -61,14 +61,8 @@ pub struct InputProcessingResult {
 ///   - `nonce_i_ok`: A boolean indicating whether the nonce asset and value are correct.
 ///   - `nonce_owner`: The address of the nonce owner.
 /// * `Err(error_code)` - If the input processing fails, returns an error code (u64).
-pub fn process_input_assets(
-    tx_input_assets: Vec<InpOut>,
-    expected_out_amount: u256,          // the amount the sender is sending in the evm txdata as Wei.
-    max_cost_wei: u256,                 // tx specied max_cost in Wei
-    nonce_assetid: b256,
-    expected_nonce_val: u64,
-    module02_assetid: b256,
-) -> Result<InputProcessingResult, u64> {
+///
+pub fn process_input_assets( tx_input_assets: Vec<InpOut>, expected_out_amount: u256, max_cost_wei: u256, nonce_assetid: b256, expected_nonce_val: u64, module02_assetid: b256, ) -> Result<InputProcessingResult, u64> {
 
     let mut inp_amounts_ok = false;
     let mut imp_nonce_ok = false;
@@ -92,22 +86,12 @@ pub fn process_input_assets(
 
     // Convert the max_cost Wei to Fuel units
     let fuel_eth_max_cost = match wei_to_eth(max_cost_wei){
-        Some(result) => {
-            // Equivalent max_cost Fuel eth value
-            result.0
-        }
-        None => {
-            // Signed rlp transaction max_cost exceeds the maximum wei value on fuel
-            return Err(2011);
-        }
+        Some(result) => { result.0 }
+        None => { return Err(2011); }
     };
 
     // check the nonce assetid and value
-    match nonce_check(
-        tx_input_assets,
-        nonce_assetid,
-        expected_nonce_val,
-    ) {
+    match nonce_check( tx_input_assets, nonce_assetid, expected_nonce_val, ) {
         NonceCheckResult::Success((_nonce_val_at_inp, nonce_owner)) => {
             nonce_owner_addr = nonce_owner;
             imp_nonce_ok = true;
@@ -130,14 +114,7 @@ pub fn process_input_assets(
                 return Err(2023u64);
             }
 
-            Ok(InputProcessingResult {
-                amounts_i_ok: inp_amounts_ok,               // agg input amounts >= total tx eth signed.
-                amount_fueleth: fuel_eth_to_receiver,       // amount to receiver as fueleth in u256.
-                max_cost_fueleth: fuel_eth_max_cost,        // max cost as fueleth in u256.
-                sender_addr: input_owner,                   // input(s) owner address (the master).
-                nonce_i_ok: imp_nonce_ok,                   // the correct nonce value/assetid was found.
-                nonce_owner: nonce_owner_addr,              // the nonce owner address (the master).
-            })
+            Ok(InputProcessingResult { amounts_i_ok: inp_amounts_ok, amount_fueleth: fuel_eth_to_receiver, max_cost_fueleth: fuel_eth_max_cost, sender_addr: input_owner, nonce_i_ok: imp_nonce_ok, nonce_owner: nonce_owner_addr, })
         },
         AggregateResult::Fail(error_code) => Err(error_code),
     }
@@ -188,15 +165,7 @@ pub struct OutputProcessingResult {
 /// The `receiver_code` should be only the 2nd leaf in from the master predicate bytecode, populated
 /// with the configurables specific to the receiver.
 ///
-pub fn process_output_assets(
-    tx_output_assets: Vec<InpOut>,
-    tx_change_assets: Vec<InpOut>,
-    ip_result: InputProcessingResult,
-    nonce_assetid: b256,
-    nonce_target_val: u64,
-    tx_receiver: b256,
-    ref mut receiver_code: Bytes,
-) -> Result<OutputProcessingResult, u64> {
+pub fn process_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: InputProcessingResult, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes ) -> Result<OutputProcessingResult, u64> {
 
     // Ensure sure there is an output for the receiver that is enough to cover the amount
     // specified in the signed transaction bytes.
@@ -220,11 +189,7 @@ pub fn process_output_assets(
                     if out_amt == ip_result.amount_fueleth {
                         // Verify that the base asset receiving address is the ZapWallet
                         // receiver mapped to the receiving evm address in the signed rlp bytes.
-                        receiver_output_found = verify_receiver(
-                            receiver_code,
-                            tx_receiver,
-                            output.owner.unwrap().into(),
-                        );
+                        receiver_output_found = verify_receiver( receiver_code, tx_receiver, output.owner.unwrap().into() );
                     }
                     if out_amt <= ip_result.max_cost_fueleth {
                         builder_tip_output_found = true;

@@ -1,16 +1,8 @@
 predicate;
 
-use std::{
-    b512::B512,
-    bytes::Bytes,
-    tx::{tx_id, tx_witness_data},
-    vm::evm::ecr::ec_recover_evm_address,
-    inputs::input_count,
-};
-use zap_utils::{
-    personal_sign::personal_sign_hash,
-    transaction_utls::{verify_input_coin, input_coin_asset_id},
-};
+use std::{ b512::B512, bytes::Bytes, tx::{tx_id, tx_witness_data}, vm::evm::ecr::ec_recover_evm_address, inputs::input_count };
+use io_utils::io::verify_no_nonce_assets;
+use zap_utils::{ personal_sign::personal_sign_hash, transaction_utls::{verify_input_coin, input_coin_asset_id} };
 
 
 configurable {
@@ -54,7 +46,7 @@ configurable {
 fn main(witness_index: u64) -> bool {
 
     // Verify that there is no Nonce asset input(s).
-    if !verify_no_nonce_assets() {
+    if !verify_no_nonce_assets(NONCE_ASSETID) {
         return false;
     }
 
@@ -67,33 +59,4 @@ fn main(witness_index: u64) -> bool {
     }
 
     return false;
-}
-
-/// Verifies that no inputs consume the nonce asset associated with this ZapWallet.
-///
-/// # Returns
-///
-/// * [bool] - False if a nonce asset input is found, true otherwise.
-///
-/// # Additional Information
-///
-/// This validation ensures that nonce assets can only be consumed through
-/// the use of other Zap modules specifically designed to handle nonce inputs
-/// and outputs. This preventing unauthorized spending of nonce assets even
-/// with a valid signature.
-///
-fn verify_no_nonce_assets() -> bool {
-    let in_count: u64 = input_count().into();
-    let mut i = 0;
-    while i < in_count {
-        if verify_input_coin(i) {
-            let coin_asset_id = input_coin_asset_id(i);
-            if (coin_asset_id == NONCE_ASSETID) {
-                return false;
-            }
-        }
-        i += 1;
-    }
-
-    return true;
 }

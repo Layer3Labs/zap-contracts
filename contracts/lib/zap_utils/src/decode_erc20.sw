@@ -1,30 +1,10 @@
 library;
 
-use std::{
-    b512::B512,
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    bytes::Bytes,
-    math::*,
-    option::Option,
-    string::String,
-};
+use std::{ b512::B512, vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress }, bytes::Bytes, math::*, option::Option, string::String,};
 use std::*;
 use std::bytes_conversions::u64::*;
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
-
-use ::rlp_utls6::{
-    convert_u8_u64,
-    rlp_decode_payload,
-    length_to_digest,
-    rlp_decode_item,
-    rlp_read_u64,
-    rlp_read_b256,
-    rlp_decode_transfer_bytes,
-    compact_signature_normalize,
-};
+use ::rlp_utls6::{ convert_u8_u64, rlp_decode_payload, length_to_digest, rlp_decode_item, rlp_read_u64, rlp_read_b256, rlp_decode_transfer_bytes, compact_signature_normalize };
 
 
 pub enum DecodeERC20RLPResult {
@@ -182,23 +162,7 @@ pub fn decode_signed_typedtx_erc20(signed_tx: Bytes) -> DecodeERC20RLPResult {
     let sig = compact_signature_normalize(r, s, v);
     let from: b256 = ec_recover_evm_address(sig, digest).unwrap().into();
 
-    DecodeERC20RLPResult::Success((
-        type_identifier,
-        chain_id, nonce,
-        maxFeePerGas,
-        gasLimit,
-        value,
-        to,
-        asset_id,
-        digest,
-        len,
-        ptr_tx_data_start,
-        ptr_tx_data_end,
-        sig,
-        from,
-        ct_to,
-        ct_amount,
-    ))
+    DecodeERC20RLPResult::Success(( type_identifier, chain_id, nonce, maxFeePerGas, gasLimit, value, to, asset_id, digest, len, ptr_tx_data_start, ptr_tx_data_end, sig, from, ct_to, ct_amount ))
 }
 
 /// Computes the digest of a signed TypedTransaction EIP-1559 (type 2) containing an ERC20 transfer.
@@ -242,16 +206,7 @@ fn tx_erc20_digest(data: Bytes, ptr_start: u64, ptr_end: u64) -> b256 {
         let a_size = len + 4;
         let a_buflen = a_size - 1;
         let len0 = len;
-        let _ = asm(hash: result_buffer,
-            ptrdata: src,
-            length: len,
-            size: a_size,
-            txtype: txtype,
-            prefix: a_prefix,
-            len0: len0,
-            buflen: a_buflen,
-            memptr
-            ) {
+        let _ = asm(hash: result_buffer, ptrdata: src, length: len, size: a_size, txtype: txtype, prefix: a_prefix, len0: len0, buflen: a_buflen, memptr ) {
             aloc size;                              // allocate memory to the stack
             sb hp txtype i1;                        // set the type identifier
             sb hp prefix i2;                        // set the payload prefix

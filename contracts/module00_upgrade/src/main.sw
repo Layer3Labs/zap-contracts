@@ -70,45 +70,27 @@ configurable {
 /// - The nonce asset ownership is verified in both inputs and outputs
 /// - The upgrade acknowledgment message is properly signed by the ZapWallet owner
 ///
-fn main(
-    compact_signature: B512,
-    v2_version: String,
-) -> bool {
+fn main( compact_signature: B512, v2_version: String ) -> bool {
 
     // Collect inputs and outputs:
     let (tx_inputs, tx_outputs, _tx_change) = collect_inputs_outputs_change();
 
     // The only function thats payable at the ZapManager V1 is the upgrade function.
     // Check if module00 asset is sent to ZapManager. Otherwise fail.
-    if !verify_module00_output(
-        tx_outputs,
-        MODULE_KEY00_ASSETID,
-        Address::from(ZAPMANAGER_V1),
-    ) {
-        return false;
-    }
+    if !verify_module00_output( tx_outputs, MODULE_KEY00_ASSETID, Address::from(ZAPMANAGER_V1) ) { return false; }
 
     // Get the owner of the nonce asset, this should be the owners ZapWallet
     let from_address: b256 = match check_asset_exists(tx_inputs, NONCE_ASSETID ) {
-        CheckAssetResult::Success(nonce_owner_from) => {
-            nonce_owner_from.into()
-        },
-        CheckAssetResult::Fail(_error_code) => {
-            // fail if there was an error matching an input to the nonce asset.
+        CheckAssetResult::Success(nonce_owner_from) => { nonce_owner_from.into() },
+        CheckAssetResult::Fail(_error_code) => { // fail if there was an error matching an input to the nonce asset.
             return false;
         },
     };
 
     // Obtain the receiving master address from the nonce asset output to
     let to_address: b256 = match check_asset_exists(tx_outputs, NONCE_ASSETID ) {
-        CheckAssetResult::Success(nonce_to) => {
-            nonce_to.into()
-        },
-        CheckAssetResult::Fail(_error_code) => {
-            // return Err(error_code);
-            //NOTE - should probably just fail it here
-            b256::zero()
-        },
+        CheckAssetResult::Success(nonce_to) => { nonce_to.into() },
+        CheckAssetResult::Fail(_error_code) => { b256::zero() },
     };
 
     // Get the utxo id of the upgrade module
@@ -127,13 +109,7 @@ fn main(
     let current_version = String::from_ascii_str("1.0.0");
 
     // Build the Acknowledgment message using the V2 version is passed in by the tx builder.
-    let acknowledgment = WalletUpgradeAcknowledgment::new(
-        from_address,
-        to_address,
-        current_version,
-        v2_version,
-        utxo_id,
-    );
+    let acknowledgment = WalletUpgradeAcknowledgment::new( from_address, to_address, current_version, v2_version, utxo_id );
     // Build the acknowledgment message
     let message = acknowledgment.get_message();
 
@@ -143,9 +119,7 @@ fn main(
     // Recover the signer and compare
     let result = ec_recover_evm_address(compact_signature, eip191_message_hash);
     if result.is_ok() {
-        if OWNER_ADDRESS == result.unwrap().into() {
-            return true;
-        }
+        if OWNER_ADDRESS == result.unwrap().into() { return true; }
     }
 
     return false;
@@ -178,9 +152,7 @@ pub fn verify_module00_output(
             // Check if the output is sent to ZapManager V1
             match output.owner {
                 Some(owner) => {
-                    if owner == zapmanagerv1 {
-                        return true;
-                    }
+                    if owner == zapmanagerv1 { return true; }
                 },
                 None => {},
             }

@@ -44,25 +44,15 @@ abi ZapManager {
 
     /// Initializes a new wallet with specified modules.
     #[storage(read, write)]
-    fn initialize_wallet(
-        master_addr: Address,
-        owner_evm_addr: EvmAddress,
-        initdata: InitData,
-    ) -> EvmAddress;
+    fn initialize_wallet( master_addr: Address, owner_evm_addr: EvmAddress, initdata: InitData ) -> EvmAddress;
 
     /// Checks if the given EVM address and master address combo have a nonce asset.
     #[storage(read)]
-    fn initialized(
-        master_address: Address,
-        evm_addr: EvmAddress,
-    ) -> bool;
+    fn initialized( master_address: Address, evm_addr: EvmAddress ) -> bool;
 
     /// Sets the ZapWallet versions for V1 and V2.
     #[storage(read, write)]
-    fn set_zapwallet_versions(
-        v1_version: str[5],
-        v2_version: str[5],
-    );
+    fn set_zapwallet_versions( v1_version: str[5], v2_version: str[5] );
 
     /// Returns the current versions of V1 and V2 ZapWallet.
     #[storage(read)]
@@ -70,10 +60,7 @@ abi ZapManager {
 
     /// Upgrades a wallet to a new version.
     #[storage(read), payable]
-    fn upgrade(
-        owner_evm_addr: EvmAddress,
-        sponsored: bool,
-    );
+    fn upgrade( owner_evm_addr: EvmAddress, sponsored: bool );
 
     /// Checks if the given EVM address has upgraded their wallet.
     fn has_upgraded(evm_addr: EvmAddress) -> bool;

@@ -1,30 +1,10 @@
 library;
 
-use std::{
-    b512::B512,
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    bytes::Bytes,
-    math::*,
-    option::Option,
-    string::String,
-    hash::*,
-};
+use std::{ b512::B512, vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress, }, bytes::Bytes, math::*, option::Option, string::String, hash::*,};
 use std::*;
 use std::bytes_conversions::{b256::*, u256::*, u64::*};
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
-use standards::src16::{
-    SRC16Base,
-    EIP712,
-    EIP712Domain,
-    DomainHash,
-    TypedDataHash,
-    DataEncoder,
-    SRC16Payload,
-    SRC16Encode,
-};
+use standards::src16::{ SRC16Base, EIP712, EIP712Domain, DomainHash, TypedDataHash, DataEncoder, SRC16Payload, SRC16Encode,};
 
 
 /// Operation wrapper for gas sponsorship signatures and parameters.
@@ -69,24 +49,8 @@ pub struct GasSponsor {
 
 impl GasSponsor {
 
-    pub fn new(
-        command: String,
-        returnaddress: b256,
-        inputgasutxoid: b256,
-        expectedgasoutputamount: u256,
-        expectedoutputasset: b256,
-        expectedoutputamount: u256,
-        tolerance: u256,
-    ) -> GasSponsor {
-        GasSponsor {
-            command,
-            returnaddress,
-            inputgasutxoid,
-            expectedgasoutputamount,
-            expectedoutputasset,
-            expectedoutputamount,
-            tolerance
-        }
+    pub fn new( command: String, returnaddress: b256, inputgasutxoid: b256, expectedgasoutputamount: u256, expectedoutputasset: b256, expectedoutputamount: u256, tolerance: u256, ) -> GasSponsor {
+        GasSponsor { command, returnaddress, inputgasutxoid, expectedgasoutputamount, expectedoutputasset, expectedoutputamount, tolerance }
     }
 }
 
@@ -100,39 +64,20 @@ const GASSPONSOR_TYPE_HASH: b256 = 0x12b061b07fda7c0cac0e0d57861c96710c33e8b9149
 
 impl TypedDataHash for GasSponsor {
 
-    fn type_hash() -> b256 {
-        GASSPONSOR_TYPE_HASH
-    }
+    fn type_hash() -> b256 { GASSPONSOR_TYPE_HASH }
 
     fn struct_hash(self) -> b256 {
         let mut encoded = Bytes::new();
         // Add the GasSponsor type hash.
-        encoded.append(
-            GASSPONSOR_TYPE_HASH.to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_string(self.command).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.returnaddress).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.inputgasutxoid).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_u256(self.expectedgasoutputamount).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.expectedoutputasset).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_u256(self.expectedoutputamount).to_be_bytes()
-        );
+        encoded.append( GASSPONSOR_TYPE_HASH.to_be_bytes());
+        encoded.append( DataEncoder::encode_string(self.command).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.returnaddress).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.inputgasutxoid).to_be_bytes() );
+        encoded.append( DataEncoder::encode_u256(self.expectedgasoutputamount).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.expectedoutputasset).to_be_bytes() );
+        encoded.append( DataEncoder::encode_u256(self.expectedoutputamount).to_be_bytes() );
         // tolerance u256
-        encoded.append(
-            DataEncoder::encode_u256(self.tolerance).to_be_bytes()
-        );
-
+        encoded.append( DataEncoder::encode_u256(self.tolerance).to_be_bytes() );
         keccak256(encoded)
     }
 
@@ -159,10 +104,5 @@ impl SRC16Encode<GasSponsor> for GasSponsor {
 
 pub fn get_domain_separator() -> EIP712Domain {
     let verifying_contract: b256 = 0x0000000000000000000000000000000000000000000000000000000000000001;
-    EIP712Domain::new(
-        String::from_ascii_str("ZapGasSponsor"),
-        String::from_ascii_str("1"),
-        (asm(r1: (0, 0, 0, 9889u64)) { r1: u256 }),
-        verifying_contract.into(),
-    )
+    EIP712Domain::new( String::from_ascii_str("ZapGasSponsor"), String::from_ascii_str("1"), (asm(r1: (0, 0, 0, 9889u64)) { r1: u256 }), verifying_contract.into(), )
 }

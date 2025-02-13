@@ -2,10 +2,7 @@ predicate;
 
 use std::bytes::Bytes;
 use zap_utils::decode_legacy::{DecodeLegacyRLPResult, decode_signed_legacy_tx};
-use io_utils::{
-    evm_base_asset::*,
-    io::{InpOut, collect_inputs_outputs_change},
-};
+use io_utils::{ evm_base_asset::*, io::{InpOut, collect_inputs_outputs_change} };
 use zapwallet_consts::wallet_consts::{FUEL_CHAINID, NONCE_MAX};
 
 
@@ -82,39 +79,16 @@ configurable {
 ///
 /// - This program can only be used to transfer the BASE_ASSET on Fuel.
 ///
-fn main(
-    signed_evm_tx: Bytes,
-    receiver_wallet_bytecode: Bytes,
-) -> bool {
+fn main( signed_evm_tx: Bytes, receiver_wallet_bytecode: Bytes ) -> bool {
 
     // Decode signed_evm_tx rlp into its constituent fields:
-    let (
-        _tx_type_identifier,
-        tx_chain_id,
-        tx_nonce,
-        tx_gas_price,
-        tx_gas_limit,
-        tx_value_wei,
-        tx_to,
-        _tx_asset_id,
-        _tx_digest,
-        _tx_lengeth,
-        _tx_data_start,
-        _tx_data_end,
-        _tx_signature,
-        tx_from
-    ) = match decode_signed_legacy_tx(signed_evm_tx) {
+    let ( _, tx_chain_id, tx_nonce, tx_gas_price, tx_gas_limit, tx_value_wei, tx_to, _, _, _, _, _,  _, tx_from ) = match decode_signed_legacy_tx(signed_evm_tx) {
         DecodeLegacyRLPResult::Success(result) => result,
-        DecodeLegacyRLPResult::Fail(_error_code) => {
-            // rlp decoding failed with error code.
-            return false;
-        },
+        DecodeLegacyRLPResult::Fail(_error_code) => { return false; },
     };
 
     // Ensure evm tx was signed by the owner & has the correct chain_id:
-    if !(tx_chain_id == FUEL_CHAINID && tx_from == OWNER_ADDRESS) {
-        return false;
-    }
+    if !(tx_chain_id == FUEL_CHAINID && tx_from == OWNER_ADDRESS) { return false; }
 
     // Specific bytecode bytes from receivers zapwallet master.
     let mut receiver_bytecode = receiver_wallet_bytecode;
@@ -129,36 +103,15 @@ fn main(
     let (tx_inputs, tx_outputs, tx_change) = collect_inputs_outputs_change();
 
     // Process the inputs:
-    let ip_result = match process_input_assets(
-        tx_inputs,
-        tx_value_wei,
-        max_cost_bn,
-        NONCE_ASSETID,
-        exp_nonce_inp_val,
-        MODULE_KEY01_ASSETID,
-    ) {
+    let ip_result = match process_input_assets( tx_inputs, tx_value_wei, max_cost_bn, NONCE_ASSETID, exp_nonce_inp_val, MODULE_KEY01_ASSETID ) {
         Ok(result) => { result },
-        Err(_error_code) => {
-            // input processing failed with error code.
-            return false;
-        },
+        Err(_error_code) => { return false; },
     };
 
     // Process the outputs while consuming input_processing_result:
-    let final_result = match process_output_assets(
-        tx_outputs,
-        tx_change,
-        ip_result,
-        NONCE_ASSETID,
-        (exp_nonce_inp_val - 1),
-        tx_to,
-        receiver_bytecode,
-    ) {
+    let final_result = match process_output_assets( tx_outputs, tx_change, ip_result, NONCE_ASSETID, (exp_nonce_inp_val - 1), tx_to, receiver_bytecode ) {
         Ok(result) => { result.outputs_ok },
-        Err(_error_code) => {
-            // output processing failed with error code.
-            false
-        },
+        Err(_error_code) => { false },
     };
 
     final_result

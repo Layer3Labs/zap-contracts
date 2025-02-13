@@ -33,17 +33,7 @@ impl Module {
 
 /// Collection of all modules in a V1 ZapWallet.
 ///
-pub struct WalletModules {
-    pub module00: Module,
-    pub module01: Module,
-    pub module02: Module,
-    pub module03: Module,
-    pub module04: Module,
-    pub module05: Module,
-    pub module06: Module,
-    pub module07: Module,
-    pub module08: Module,
-}
+pub struct WalletModules { pub module00: Module, pub module01: Module, pub module02: Module, pub module03: Module, pub module04: Module, pub module05: Module,pub module06: Module, pub module07: Module, pub module08: Module }
 
 /// Initializes a complete set of wallet modules with their respective assets and addresses
 /// for this unique ZapWallet.
@@ -58,56 +48,24 @@ pub struct WalletModules {
 /// * [WalletModules] - Initialized wallet modules structure
 ///
 pub fn setup_walletmodues(
-    ASSET_KEY00: b256, MODULE00_ADDR: Address,
-    ASSET_KEY01: b256, MODULE01_ADDR: Address,
-    ASSET_KEY02: b256, MODULE02_ADDR: Address,
-    ASSET_KEY03: b256, MODULE03_ADDR: Address,
-    ASSET_KEY04: b256, MODULE04_ADDR: Address,
-    ASSET_KEY05: b256, MODULE05_ADDR: Address,
-    ASSET_KEY06: b256, MODULE06_ADDR: Address,
-    ASSET_KEY07: b256, MODULE07_ADDR: Address,
-    ASSET_KEY08: b256, MODULE08_ADDR: Address,
+    ASSET_KEY00: b256, MODULE00_ADDR: Address, ASSET_KEY01: b256, MODULE01_ADDR: Address,
+    ASSET_KEY02: b256, MODULE02_ADDR: Address, ASSET_KEY03: b256, MODULE03_ADDR: Address,
+    ASSET_KEY04: b256, MODULE04_ADDR: Address, ASSET_KEY05: b256, MODULE05_ADDR: Address,
+    ASSET_KEY06: b256, MODULE06_ADDR: Address, ASSET_KEY07: b256, MODULE07_ADDR: Address, ASSET_KEY08: b256, MODULE08_ADDR: Address,
 ) -> WalletModules {
 
     // precalculated modules assetid's:
     // precalculated modules addresses:
     WalletModules {
-        module00: Module {
-            assetid: ASSET_KEY00,
-            address: MODULE00_ADDR,
-        },
-        module01: Module {
-            assetid: ASSET_KEY01,
-            address: MODULE01_ADDR,
-        },
-        module02: Module {
-            assetid: ASSET_KEY02,
-            address: MODULE02_ADDR,
-        },
-        module03: Module {
-            assetid: ASSET_KEY03,
-            address: MODULE03_ADDR,
-        },
-        module04: Module {
-            assetid: ASSET_KEY04,
-            address: MODULE04_ADDR,
-        },
-        module05: Module {
-            assetid: ASSET_KEY05,
-            address: MODULE05_ADDR,
-        },
-        module06: Module {
-            assetid: ASSET_KEY06,
-            address: MODULE06_ADDR,
-        },
-        module07: Module {
-            assetid: ASSET_KEY07,
-            address: MODULE07_ADDR,
-        },
-        module08: Module {
-            assetid: ASSET_KEY08,
-            address: MODULE08_ADDR,
-        },
+        module00: Module { assetid: ASSET_KEY00, address: MODULE00_ADDR, },
+        module01: Module { assetid: ASSET_KEY01, address: MODULE01_ADDR, },
+        module02: Module { assetid: ASSET_KEY02, address: MODULE02_ADDR, },
+        module03: Module { assetid: ASSET_KEY03, address: MODULE03_ADDR, },
+        module04: Module { assetid: ASSET_KEY04, address: MODULE04_ADDR, },
+        module05: Module { assetid: ASSET_KEY05, address: MODULE05_ADDR, },
+        module06: Module { assetid: ASSET_KEY06, address: MODULE06_ADDR, },
+        module07: Module { assetid: ASSET_KEY07, address: MODULE07_ADDR, },
+        module08: Module { assetid: ASSET_KEY08, address: MODULE08_ADDR, },
     }
 }
 
@@ -173,10 +131,7 @@ pub fn match_module(somemod: Module, walmods: WalletModules) -> Option<u64> {
 /// - Amount is exactly 1
 /// - Output is to correct module address
 ///
-pub fn check_output_module(
-    outputs: Vec<InpOut>,
-    modulex: Module
-) -> bool {
+pub fn check_output_module( outputs: Vec<InpOut>, modulex: Module ) -> bool {
     let mut tx_outputs = outputs;
     let mut found = false;
     let mut k = 0;

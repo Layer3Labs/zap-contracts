@@ -8,35 +8,12 @@ use std::{
     bytes_conversions::u64::*,
     primitive_conversions::{u16::*, u32::*, u64::*},
     tx::tx_witness_data,
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    inputs::{
-        input_coin_owner,
-        input_count,
-        input_asset_id,
-        input_amount,
-        Input,
-    },
-    outputs::{
-        output_count,
-        output_asset_id,
-        output_asset_to,
-        output_amount,
-        Output,
-    },
+    vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress },
+    inputs::{ input_coin_owner, input_count, input_asset_id, input_amount, Input },
+    outputs::{ output_count, output_asset_id, output_asset_to, output_amount, Output },
 };
 use zap_utils::{
-    transaction_utls::{
-        input_coin_amount,
-        input_coin_asset_id,
-        verify_input_coin,
-        output_coin_asset_id,
-        verify_output_change,
-        verify_output_coin,
-        input_txn_hash,
-    },
+    transaction_utls::{ input_coin_amount, input_coin_asset_id, verify_input_coin, output_coin_asset_id, verify_output_change, verify_output_coin, input_txn_hash },
 };
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 use module07_utils::{
@@ -134,12 +111,7 @@ fn main(op: SponsorOp) -> bool {
     while i < in_count {
         // collect all the input coins
         if verify_input_coin(i) {
-            let inp = InpOut::new(
-                input_coin_asset_id(i),
-                Some(input_coin_amount(i)),
-                Some(input_txn_hash(i)),
-                input_coin_owner(i)
-            );
+            let inp = InpOut::new( input_coin_asset_id(i), Some(input_coin_amount(i)), Some(input_txn_hash(i)), input_coin_owner(i) );
             tx_inputs.push(inp);
         }
         i += 1;
@@ -150,26 +122,14 @@ fn main(op: SponsorOp) -> bool {
         // collect all the output coins
         if verify_output_coin(j) {
 
-            let outp = InpOut::new(
-                output_coin_asset_id(j).unwrap(),
-                Some(output_amount(j).unwrap()),
-                None,
-                Some(output_asset_to(j).unwrap()),
-            );
+            let outp = InpOut::new( output_coin_asset_id(j).unwrap(), Some(output_amount(j).unwrap()), None, Some(output_asset_to(j).unwrap()) );
             tx_outputs.push(outp);
         }
         // collect all the change outputs assetid's and receivers.
         match verify_output_change(j) {
             Some(is_change) => {
                 if is_change {
-                    tx_change.push(
-                        InpOut::new(
-                            output_asset_id(j).unwrap().into(), // whats the assetid of the change.
-                            None,
-                            None,
-                            Some(output_asset_to(j).unwrap()),  // who is the change going to
-                        )
-                    );
+                    tx_change.push( InpOut::new( output_asset_id(j).unwrap().into(), None, None, Some(output_asset_to(j).unwrap()) ) );
                 }
             },
             _ => {},
@@ -188,15 +148,7 @@ fn main(op: SponsorOp) -> bool {
     let rebuilt_gassponsor = match sha256(op.sponsor_details.command) {
         COMMAND_SPONSOR_HASH => {   // run command: "sponsor"
             // Process "sponsor" outputs:
-            let rebuilt_sponsor = match process_output_assets_command_sponsor(
-                tx_outputs,
-                tx_change,
-                op.sponsor_details.expectedoutputasset,     // other_asset id
-                op.sponsor_details.expectedoutputamount,    // other_asset amount
-                op.sponsor_details.tolerance,
-                gas_owner_addr.into(),                      // gas return addr
-                op.sponsor_details.expectedgasoutputamount, // gas amount to return
-                gas_utxo,
+            let rebuilt_sponsor = match process_output_assets_command_sponsor( tx_outputs, tx_change, op.sponsor_details.expectedoutputasset, op.sponsor_details.expectedoutputamount, op.sponsor_details.tolerance, gas_owner_addr.into(), op.sponsor_details.expectedgasoutputamount, gas_utxo,
             ) {
                 Ok(gassponsor) => gassponsor,
                 Err(_error_code) => {
@@ -209,12 +161,7 @@ fn main(op: SponsorOp) -> bool {
         },
         COMMAND_GASPASS_HASH => {   // run command: "gaspass"
             // Process "gaspass" outputs:
-            let rebuilt_gaspass = match process_output_assets_command_gaspass(
-                tx_outputs,
-                tx_change,
-                gas_owner_addr.into(),                      // gas return addr
-                op.sponsor_details.expectedgasoutputamount, // gas amount to return
-                gas_utxo,
+            let rebuilt_gaspass = match process_output_assets_command_gaspass( tx_outputs, tx_change, gas_owner_addr.into(), op.sponsor_details.expectedgasoutputamount, gas_utxo,
             ) {
                 Ok(gassponsor) => gassponsor,
                 Err(_error_code) => {
@@ -228,33 +175,17 @@ fn main(op: SponsorOp) -> bool {
         COMMAND_CANCEL_HASH => { // run command: "cancel"
             // Nothing to process, just make sure the builder specifies which utxo.
             // This constraint verifies that only this gas utxo will be moved.
-            GasSponsor::new(
-                String::from_ascii_str("cancel"),
-                b256::zero(),
-                gas_utxo,
-                u256::zero(),
-                b256::zero(),
-                u256::zero(),
-                u256::zero()
-            )
+            GasSponsor::new( String::from_ascii_str("cancel"), b256::zero(), gas_utxo, u256::zero(), b256::zero(), u256::zero(), u256::zero())
         },
         _ => { return false; }
     };
 
     // Encode and hash rebuilt GasSponsor struct and recover signer:
-    let payload = SRC16Payload {
-        domain: get_domain_separator(),
-        data_hash: rebuilt_gassponsor.struct_hash(),
-    };
-    let encoded_hash = match payload.encode_hash() {
-        Some(hash) => hash,
-        None => {return false;},
-    };
+    let payload = SRC16Payload { domain: get_domain_separator(), data_hash: rebuilt_gassponsor.struct_hash() };
+    let encoded_hash = match payload.encode_hash() { Some(hash) => hash, None => {return false;} };
     let recovered_signer: b256 = ec_recover_evm_address(compactsig, encoded_hash).unwrap().into();
     //TODO - handle error.
-    if recovered_signer == OWNER_ADDRESS {
-        return true;
-    }
+    if recovered_signer == OWNER_ADDRESS { return true; }
 
     return false;
 }

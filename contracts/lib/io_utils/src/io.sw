@@ -43,6 +43,39 @@ impl InpOut {
     }
 }
 
+/// Verifies that no inputs consume the nonce asset associated with this ZapWallet.
+///
+/// # Arguments
+///
+/// * `nonce_assetid` - The asset ID to search for in the inputs.
+///
+/// # Returns
+///
+/// * [bool] - False if a nonce asset input is found, true otherwise.
+///
+/// # Additional Information
+///
+/// This validation ensures that nonce assets can only be consumed through
+/// the use of other Zap modules specifically designed to handle nonce inputs
+/// and outputs. This preventing unauthorized spending of nonce assets even
+/// with a valid signature.
+///
+pub fn verify_no_nonce_assets(nonce_assetid: b256) -> bool {
+    let in_count: u64 = input_count().into();
+    let mut i = 0;
+    while i < in_count {
+        if verify_input_coin(i) {
+            let coin_asset_id = input_coin_asset_id(i);
+            if (coin_asset_id == nonce_assetid) {
+                return false;
+            }
+        }
+        i += 1;
+    }
+
+    return true;
+}
+
 /// Collects and categorizes all inputs, outputs, and change outputs from the current transaction.
 ///
 /// # Additional Information

@@ -6,4 +6,5 @@ name = "module04_txidwit"
 
 [dependencies]
 zap_utils = { path = "../lib/zap_utils" }
+io_utils = { path = "../lib/io_utils" }
 

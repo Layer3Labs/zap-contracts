@@ -1,19 +1,10 @@
 library;
 
-use std::{
-    bytes::Bytes,
-    b512::B512,
-    string::String,
-    vm::evm::evm_address::EvmAddress,
-};
+use std::{ bytes::Bytes, b512::B512, string::String, vm::evm::evm_address::EvmAddress };
 
 
 /// Event emitted when contract state is changed
-pub struct ContractStateEvent {
-    can_initialize: bool,
-    can_upgrade: bool,
-    sender: Identity,
-}
+pub struct ContractStateEvent { can_initialize: bool, can_upgrade: bool, sender: Identity }
 
 impl ContractStateEvent {
     pub fn new(can_initialize: bool, can_upgrade: bool, sender: Identity) -> Self {
@@ -30,19 +21,11 @@ impl ContractStateEvent {
 }
 
 /// Event emitted when initialize_wallet is called
-pub struct InitializeWalletEvent {
-    predicate_address: Address,
-    owner_evm_address: EvmAddress,
-    is_base_modules: bool,  // true if InitModules, false if NewModule
-}
+pub struct InitializeWalletEvent { predicate_address: Address, owner_evm_address: EvmAddress, is_base_modules: bool }
 
 impl InitializeWalletEvent {
     pub fn new(predicate_address: Address, owner_evm_address: EvmAddress, is_base_modules: bool) -> Self {
-        Self {
-            predicate_address,
-            owner_evm_address,
-            is_base_modules,
-        }
+        Self { predicate_address, owner_evm_address, is_base_modules }
     }
 
     pub fn log(self) {
@@ -59,11 +42,7 @@ pub struct WalletVersionsEvent {
 
 impl WalletVersionsEvent {
     pub fn new(v1_version: str[5], v2_version: str[5], sender: Identity) -> Self {
-        Self {
-            v1_version,
-            v2_version,
-            sender,
-        }
+        Self { v1_version, v2_version, sender }
     }
 
     pub fn log(self) {
@@ -80,21 +59,8 @@ pub struct UpgradeEvent {
 }
 
 impl UpgradeEvent {
-    pub fn new(
-        owner_evm_addr: EvmAddress,
-        master_address: Address,
-        is_sponsored: bool,
-        verified_nonce: AssetId,
-    ) -> Self {
-        Self {
-            owner_evm_addr,
-            master_address,
-            is_sponsored,
-            verified_nonce,
-        }
-    }
+    pub fn new( owner_evm_addr: EvmAddress, master_address: Address, is_sponsored: bool, verified_nonce: AssetId,
+    ) -> Self { Self { owner_evm_addr, master_address, is_sponsored, verified_nonce } }
 
-    pub fn log(self) {
-        log(self);
-    }
+    pub fn log(self) { log(self); }
 }

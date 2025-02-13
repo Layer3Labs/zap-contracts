@@ -181,22 +181,7 @@ pub fn decode_signed_legacy_tx(signed_tx: Bytes) -> DecodeLegacyRLPResult {
 
     let asset_id = b256::zero();
 
-    DecodeLegacyRLPResult::Success((
-        type_identifier,
-        chain_id,
-        nonce,
-        gas_price,
-        gas_limit,
-        value,
-        to,
-        asset_id,
-        digest,
-        0,
-        0,
-        0,
-        sig,
-        from,
-    ))
+    DecodeLegacyRLPResult::Success(( type_identifier, chain_id, nonce, gas_price, gas_limit, value, to, asset_id, digest, 0, 0, 0, sig, from ))
 }
 
 /// Computes the digest of a signed Legacy transaction
@@ -226,13 +211,7 @@ pub fn decode_signed_legacy_tx(signed_tx: Bytes) -> DecodeLegacyRLPResult {
 /// - chain_id_bytes: RLP encoded chain ID
 /// - 0x80 0x80: Two RLP encoded zeros per EIP-155
 ///
-fn tx_type_legacy_digest(
-    encoded_payload_prefix: u64,
-    signed_tx: Bytes,
-    payload_ptr_start: u64,
-    payload_ptr_end: u64,
-    chain_id_bytes: Vec<u8>,
-    ) -> b256 {
+fn tx_type_legacy_digest( encoded_payload_prefix: u64, signed_tx: Bytes, payload_ptr_start: u64, payload_ptr_end: u64, chain_id_bytes: Vec<u8> ) -> b256 {
         let mut result_buffer = b256::min();
         let chain_id_bytes_len = chain_id_bytes.len();
 
@@ -274,14 +253,7 @@ fn tx_type_legacy_digest(
         let a_buflen = a_size - 1;
         let x_src = payloadbytes.ptr();
 
-        let _ = asm(
-            hash: result_buffer,            // result buffer.
-            ptrdata: x_src,                 // the payload data bytes.
-            length: a_buflen,               // the length of the payload data.
-            size: a_size,                   // the size of the buffer to alloc on stack.
-            buflen: a_buflen,               // the size of the buffer to hash.
-            memptr                          //
-            ) {
+        let _ = asm( hash: result_buffer, ptrdata: x_src, length: a_buflen,  size: a_size, buflen: a_buflen, memptr  ) {
             aloc size;                              // allocate memory to the stack
             addi memptr hp i1;                      // increase memory pointer for copying payload items
             mcp  memptr ptrdata length;             // copy

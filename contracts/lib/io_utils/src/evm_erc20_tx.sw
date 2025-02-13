@@ -43,27 +43,12 @@ pub fn compare_asset_ids(x: b256, y: b256) -> bool {
 /// Returns true if the asset is valid (one of the allowed types)
 /// Returns false if the asset is not an allowed type
 ///
-fn is_valid_asset_type(
-    asset: b256,
-    src20_asset: b256,
-    nonce_asset: b256,
-    module03_asset: b256,
-) -> bool {
-    if asset == FUEL_BASE_ASSET {
-        return true;
-    }
-
-    if asset == nonce_asset {
-        return true;
-    }
-
-    if asset == module03_asset {
-        return true;
-    }
-
-    if compare_asset_ids(src20_asset, asset) {
-        return true;
-    }
+fn is_valid_asset_type( asset: b256, src20_asset: b256, nonce_asset: b256, module03_asset: b256 ) -> bool {
+    //REVIEW - match statementh use here compiles to nonsensical warning.
+    if asset == FUEL_BASE_ASSET { return true; }
+    if asset == nonce_asset { return true; }
+    if asset == module03_asset { return true; }
+    if compare_asset_ids(src20_asset, asset) { return true; }
 
     false
 }
@@ -89,10 +74,7 @@ pub struct AggSuccess {
 /// * `Success(AggSuccess)` - Contains aggregated transaction data in an AggSuccess struct
 /// * `Fail(u64)` - Contains an error code indicating why the aggregation failed
 ///
-pub enum AggregateResult {
-    Success: (AggSuccess),
-    Fail: (u64),
-}
+pub enum AggregateResult { Success: (AggSuccess), Fail: (u64),}
 
 /// Aggregates assets and their amounts from a vector of InpOut structures.
 ///
@@ -115,13 +97,7 @@ pub enum AggregateResult {
 ///   - A boolean indicating whether all input assets are of type FUEL_BASE_ASSET and have the same owner.
 /// * AggregateResult::Fail - If the aggregation fails, returns an error code (u64).
 ///
-pub fn aggregate_multiple_assets(
-    tx_inputs: Vec<InpOut>,
-    src20_asset: b256,          // from rlp tx
-    nonce_asset: b256,
-    nonce_owner: Address,
-    modulexx_asset: b256,
-) -> AggregateResult {
+pub fn aggregate_multiple_assets( tx_inputs: Vec<InpOut>, src20_asset: b256, nonce_asset: b256, nonce_owner: Address, modulexx_asset: b256,) -> AggregateResult {
     let mut aggregated_gas_amount = u256::zero();
     let mut aggregated_src20_amount = u256::zero();
     let mut src20_assetid = b256::zero();
@@ -181,15 +157,7 @@ pub fn aggregate_multiple_assets(
         i += 1;
     }
 
-    AggregateResult::Success(
-        AggSuccess {
-            agg_gas_amount: aggregated_gas_amount,
-            agg_src20_amount: aggregated_src20_amount,
-            src20_assetid: src20_assetid,
-            sender_addr: owner_address,
-            assets_same_owner: assets_same_owner,
-        }
-    )
+    AggregateResult::Success( AggSuccess { agg_gas_amount: aggregated_gas_amount, agg_src20_amount: aggregated_src20_amount, src20_assetid: src20_assetid, sender_addr: owner_address,  assets_same_owner: assets_same_owner, } )
 }
 
 /// Result structure containing processed SRC20 input asset information
@@ -225,37 +193,18 @@ struct SRC20InputProcessingResult {
 ///   - 3005: Input assets have different owners
 ///   - Other codes from nonce check or asset aggregation failures
 ///
-pub fn process_src20_input_assets(
-    tx_input_assets: Vec<InpOut>,
-    expected_src20_asset: b256,
-    expected_src20_amount: u256,        // the amount the sender is sending in the evm txdata as U256.
-    max_cost_wei: u256,                 // tx specied max_cost in Wei
-    nonce_assetid: b256,
-    expected_nonce_val: u64,
-    modulexx_assetid: b256,
-) -> Result<SRC20InputProcessingResult, u64> {
+pub fn process_src20_input_assets( tx_input_assets: Vec<InpOut>, expected_src20_asset: b256, expected_src20_amount: u256, max_cost_wei: u256,  nonce_assetid: b256, expected_nonce_val: u64, modulexx_assetid: b256, ) -> Result<SRC20InputProcessingResult, u64> {
 
     let mut nonce_owner_addr = Address::zero();
 
     // covert the e18 value to the fueleth value, return as u256
     let fuel_eth_max_cost = match wei_to_eth(max_cost_wei){
-        Some(result) => {
-            // equivalent max_cost Fuel eth value.
-            result.0
-        }
-        None => {
-            //log(String::from_ascii_str("Error: exceeds the maximum wei value on fuel"));
-            //TODO - this needs to fail the execution.
-            u256::zero()
-        }
+        Some(result) => { result.0 }
+        None => { u256::zero() }
     };
 
     // Check the nonce assetid and value
-    match nonce_check(
-        tx_input_assets,
-        nonce_assetid,
-        expected_nonce_val,
-    ) {
+    match nonce_check( tx_input_assets, nonce_assetid, expected_nonce_val ) {
         NonceCheckResult::Success((_nonce_val_at_inp, nonce_owner)) => {
             nonce_owner_addr = nonce_owner;
         },
@@ -264,13 +213,7 @@ pub fn process_src20_input_assets(
         },
     }
 
-    match aggregate_multiple_assets(
-        tx_input_assets,
-        expected_src20_asset,
-        nonce_assetid,
-        nonce_owner_addr,
-        modulexx_assetid,
-    ) {
+    match aggregate_multiple_assets( tx_input_assets, expected_src20_asset, nonce_assetid, nonce_owner_addr, modulexx_assetid, ) {
         AggregateResult::Success(agg_res) => {
 
             // Verify the native asset transfer total amount
@@ -280,23 +223,13 @@ pub fn process_src20_input_assets(
             }
 
             // Verify there is enough gas
-            if !(agg_res.agg_gas_amount >= fuel_eth_max_cost) {
-                // inputs gas total amount incorrect
-                return Err(3004u64);
-            }
+            if !(agg_res.agg_gas_amount >= fuel_eth_max_cost) { return Err(3004u64); }
 
             // The input assets are not from the same owner.
-            if !agg_res.assets_same_owner {
-                return Err(3005u64);
-            }
+            if !agg_res.assets_same_owner { return Err(3005u64); }
 
             // agg_res.sender_addr has been checked and is the same as nonce owner address
-            Ok(SRC20InputProcessingResult {
-                src20_assetid: agg_res.src20_assetid,
-                max_cost_fueleth: fuel_eth_max_cost,
-                sender_addr: agg_res.sender_addr,
-
-            })
+            Ok(SRC20InputProcessingResult { src20_assetid: agg_res.src20_assetid, max_cost_fueleth: fuel_eth_max_cost, sender_addr: agg_res.sender_addr, })
         },
         AggregateResult::Fail(error_code) => Err(error_code),
     }
@@ -329,16 +262,7 @@ pub fn process_src20_input_assets(
 ///   - 3076: Missing nonce output owner
 ///   - 3077: Missing nonce output amount
 ///
-pub fn process_src20_output_assets(
-    tx_output_assets: Vec<InpOut>,
-    tx_change_assets: Vec<InpOut>,
-    ip_result: SRC20InputProcessingResult,
-    receiver_src20_amount: u256,        // the amount the sender is sending in the evm txdata as U256.
-    nonce_assetid: b256,
-    nonce_target_val: u64,
-    tx_receiver: b256,
-    ref mut receiver_code: Bytes,
-) -> Result<bool, u64> {
+pub fn process_src20_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: SRC20InputProcessingResult, receiver_src20_amount: u256, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes,) -> Result<bool, u64> {
 
     // Ensure sure there is an src20 output for the receiver that is enough to
     // cover receiver src20 amount (u256)
@@ -350,19 +274,10 @@ pub fn process_src20_output_assets(
                     let mut out_amt = asm(r1: (0, 0, 0, amount)) { r1: u256 };
                     if out_amt == receiver_src20_amount {
                         // verify that the output for the src20 asset is to the receiver.
-                        if !verify_receiver(
-                            receiver_code,
-                            tx_receiver,    // the padded evm address from rlp tx.
-                            output.owner.unwrap().into(),   //Option<Address> --> b256
-                        ) {
-                            return Err(3070u64);
-                        }
+                        if !verify_receiver( receiver_code,tx_receiver, output.owner.unwrap().into(), ) { return Err(3070u64); }
                     }
                 }
-                None => {
-                    // If the amount is None, skip this output
-                    continue;
-                }
+                None => { continue; }
             }
         }
 
@@ -426,11 +341,7 @@ pub fn process_src20_output_assets(
     }
 
     // Ensure Base Asset change gets sent back to owner:
-    if !verify_change_output(
-        tx_change_assets,
-        FUEL_BASE_ASSET,
-        Address::from(ip_result.sender_addr)
-    ) {
+    if !verify_change_output( tx_change_assets, FUEL_BASE_ASSET, Address::from(ip_result.sender_addr) ) {
         // if there is no base asset change output to the owner then fail.
         return Err(3071u64);
     }

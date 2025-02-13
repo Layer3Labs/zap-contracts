@@ -25,20 +25,8 @@ pub struct WalletUpgradeAcknowledgment {
 }
 
 impl WalletUpgradeAcknowledgment {
-    pub fn new(
-        from_address: b256,
-        to_address: b256,
-        current_version: String,
-        new_version: String,
-        utxoid: b256,
-    ) -> Self {
-        Self {
-            from_address,
-            to_address,
-            current_version,
-            new_version,
-            utxoid,
-        }
+    pub fn new( from_address: b256, to_address: b256, current_version: String, new_version: String, utxoid: b256, ) -> Self {
+        Self { from_address, to_address, current_version, new_version, utxoid, }
     }
 
     /// Generates a formatted upgrade acknowledgment message for wallet upgrade authorization.

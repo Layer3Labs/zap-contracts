@@ -1,30 +1,10 @@
 library;
 
-use std::{
-    b512::B512,
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    bytes::Bytes,
-    math::*,
-    option::Option,
-    string::String,
-    hash::*,
-};
+use std::{ b512::B512, vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress, }, bytes::Bytes, math::*, option::Option, string::String, hash::*,};
 use std::*;
 use std::bytes_conversions::{b256::*, u256::*, u64::*};
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
-use standards::src16::{
-    SRC16Base,
-    EIP712,
-    EIP712Domain,
-    DomainHash,
-    TypedDataHash,
-    DataEncoder,
-    SRC16Payload,
-    SRC16Encode,
-};
+use standards::src16::{ SRC16Base, EIP712, EIP712Domain, DomainHash, TypedDataHash, DataEncoder, SRC16Payload, SRC16Encode, };
 
 
 
@@ -39,22 +19,8 @@ pub struct NativeTransfer {
 
 impl NativeTransfer {
 
-    pub fn new(
-        assetid: b256,
-        amount: u256,
-        from: b256,
-        to: b256,
-        maxtxcost: u256,
-        utxoid: b256,
-    ) -> NativeTransfer {
-        NativeTransfer {
-            Asset_Id: assetid,
-            Amount: amount,
-            From: from,
-            To: to,
-            Max_Tx_Cost: maxtxcost,
-            Utxo_ID: utxoid
-        }
+    pub fn new( assetid: b256, amount: u256, from: b256, to: b256, maxtxcost: u256, utxoid: b256,) -> NativeTransfer {
+        NativeTransfer { Asset_Id: assetid, Amount: amount, From: from, To: to, Max_Tx_Cost: maxtxcost, Utxo_ID: utxoid }
     }
 }
 
@@ -75,28 +41,13 @@ impl TypedDataHash for NativeTransfer {
     fn struct_hash(self) -> b256 {
         let mut encoded = Bytes::new();
         // Add the NativeTransfer type hash.
-        encoded.append(
-            NATIVE_TRANSFER_TYPEHASH.to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.Asset_Id).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_u256(self.Amount).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.From).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.To).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_u256(self.Max_Tx_Cost).to_be_bytes()
-        );
-        encoded.append(
-            DataEncoder::encode_b256(self.Utxo_ID).to_be_bytes()
-        );
-
+        encoded.append( NATIVE_TRANSFER_TYPEHASH.to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.Asset_Id).to_be_bytes() );
+        encoded.append( DataEncoder::encode_u256(self.Amount).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.From).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.To).to_be_bytes() );
+        encoded.append( DataEncoder::encode_u256(self.Max_Tx_Cost).to_be_bytes() );
+        encoded.append( DataEncoder::encode_b256(self.Utxo_ID).to_be_bytes() );
         keccak256(encoded)
     }
 }
@@ -119,10 +70,5 @@ impl SRC16Encode<NativeTransfer> for NativeTransfer {
 
 pub fn get_domain_separator() -> EIP712Domain {
     let verifying_contract: b256 = 0x0000000000000000000000000000000000000000000000000000000000000001;
-    EIP712Domain::new(
-        String::from_ascii_str("ZapNativeTransfer"),
-        String::from_ascii_str("1"),
-        (asm(r1: (0, 0, 0, 9889u64)) { r1: u256 }),
-        verifying_contract.into(),
-    )
+    EIP712Domain::new( String::from_ascii_str("ZapNativeTransfer"), String::from_ascii_str("1"), (asm(r1: (0, 0, 0, 9889u64)) { r1: u256 }), verifying_contract.into(), )
 }

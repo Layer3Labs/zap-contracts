@@ -1,30 +1,9 @@
 library;
 
 use std::{
-    inputs::{
-        GTF_INPUT_COIN_AMOUNT,
-        GTF_INPUT_COIN_ASSET_ID,
-        input_type,
-        Input,
-    },
-    outputs::{
-        GTF_OUTPUT_TYPE,
-        GTF_OUTPUT_COIN_AMOUNT,
-        GTF_OUTPUT_COIN_ASSET_ID,
-        GTF_OUTPUT_COIN_TO,
-        output_type,
-        Output,
-    },
-    tx::{
-        GTF_SCRIPT_GAS_LIMIT,
-        GTF_POLICY_TYPES,
-        GTF_SCRIPT_INPUTS_COUNT,
-        GTF_SCRIPT_OUTPUTS_COUNT,
-        GTF_CREATE_OUTPUT_AT_INDEX,
-        GTF_SCRIPT_OUTPUT_AT_INDEX,
-        Transaction,
-        tx_type,
-    },
+    inputs::{ GTF_INPUT_COIN_AMOUNT, GTF_INPUT_COIN_ASSET_ID, input_type, Input, },
+    outputs::{ GTF_OUTPUT_TYPE, GTF_OUTPUT_COIN_AMOUNT, GTF_OUTPUT_COIN_ASSET_ID, GTF_OUTPUT_COIN_TO, output_type, Output, },
+    tx::{ GTF_SCRIPT_GAS_LIMIT, GTF_POLICY_TYPES, GTF_SCRIPT_INPUTS_COUNT, GTF_SCRIPT_OUTPUTS_COUNT, GTF_CREATE_OUTPUT_AT_INDEX, GTF_SCRIPT_OUTPUT_AT_INDEX, Transaction, tx_type, },
 };
 
 /// This is contained in sway 0.66.5 sway-lib-std/src/inputs.sw

@@ -1,41 +1,15 @@
 predicate;
 
-use std::{
-    b512::B512,
-    bytes::Bytes,
-    string::String,
-    hash::{keccak256},
-    vm::evm::{
-        ecr::ec_recover_evm_address,
-        evm_address::EvmAddress,
-    },
-    inputs::{
-        input_count,
-        input_coin_owner,
-    },
-    outputs::{
-        output_count,
-    },
+use std::{ b512::B512, bytes::Bytes, string::String, hash::{keccak256},
+    vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress },
+    inputs::{ input_count, input_coin_owner }, outputs::{ output_count },
 };
 use std::primitive_conversions::{u16::*, u64::*};
 use standards::src16::SRC16Payload;
-use module05_utils::native_transfer::{
-    NativeTransfer, get_domain_separator
-};
-use zap_utils::{
-    merkle_utils::{MerkleUtils, V1Predicate},
-    transaction_utls::{
-        input_coin_amount,
-        input_coin_asset_id,
-        verify_output_change,
-        verify_input_coin,
-        verify_output_coin,
-        output_coin_asset_id,
-        output_coin_to,
-        output_coin_amount,
-    }
-};
-use io_utils::io::find_utxoid_and_owner_by_asset;
+use module05_utils::native_transfer::{ NativeTransfer, get_domain_separator };
+use zap_utils::{ merkle_utils::{MerkleUtils, V1Predicate},
+    transaction_utls::{ input_coin_amount, input_coin_asset_id, verify_output_change, verify_input_coin, verify_output_coin, output_coin_asset_id, output_coin_to, output_coin_amount } };
+use io_utils::io::{find_utxoid_and_owner_by_asset, verify_no_nonce_assets};
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 
 
@@ -150,15 +124,10 @@ pub enum AssetType {
 ///
 /// additional infor about bytecode setup
 ///
-fn main(
-    signature: B512,
-    transfer_asset: AssetType,
-    sponsor_type: SponsorType,
-    sender_wallet_bytecode: Bytes,
-) -> bool {
+fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, sender_wallet_bytecode: Bytes ) -> bool {
 
     // Verify that there is no Nonce asset input(s).
-    if !verify_no_nonce_assets() {
+    if !verify_no_nonce_assets(NONCE_ASSETID) {
         return false;
     }
 
@@ -166,20 +135,12 @@ fn main(
     // Specific bytecode bytes from receivers zapwallet master.
     let mut sender_bytecode = sender_wallet_bytecode;
     let v1_predicate = V1Predicate::new();
-    let owner_zapwallet_addr = v1_predicate.calculate_predicate_address(
-        sender_bytecode,
-        OWNER_ADDRESS
-    );
+    let owner_zapwallet_addr = v1_predicate.calculate_predicate_address( sender_bytecode, OWNER_ADDRESS );
 
     // Find module05 owner and transaction utxoid
     let (utxo_id, _module05_owner) = match find_utxoid_and_owner_by_asset(MODULE_KEY05_ASSETID) {
-        Some((utxoid, owner)) => {
-            (utxoid, owner)
-        },
-        None => {
-            //TODO - Handle the case where module05's asset input was not found
-            (b256::zero(), Address::zero())
-        }
+        Some((utxoid, owner)) => { (utxoid, owner) },
+        None => { (b256::zero(), Address::zero()) }
     };
 
     // ---------- PROCESS PARAMETERS ------------
@@ -189,11 +150,8 @@ fn main(
     let (gas_payer, is_sponsored) = if let SponsorType::Sponsored(sponsor_address) = sponsor_type {
         // The master predicate cannot be used as a sponsor
         assert(sponsor_address != owner_zapwallet_addr);
-
         (sponsor_address, true)
-    } else {
-        (owner_zapwallet_addr, false)
-    };
+    } else { (owner_zapwallet_addr, false) };
 
     // The Asset ID to be transferred is taken from the parameters, it is either the
     // BASE_ASSET or the passed in asset id.
@@ -340,33 +298,4 @@ fn main(
     let recovered_adderss = ec_recover_evm_address(signature, encoded_hash).unwrap();
 
     return (recovered_adderss == EvmAddress::from(OWNER_ADDRESS));
-}
-
-/// Verifies that no inputs consume the nonce asset associated with this ZapWallet.
-///
-/// # Returns
-///
-/// * [bool] - False if a nonce asset input is found, true otherwise.
-///
-/// # Additional Information
-///
-/// This validation ensures that nonce assets can only be consumed through
-/// the use of other Zap modules specifically designed to handle nonce inputs
-/// and outputs. This preventing unauthorized spending of nonce assets even
-/// with a valid signature.
-///
-fn verify_no_nonce_assets() -> bool {
-    let in_count: u64 = input_count().into();
-    let mut i = 0;
-    while i < in_count {
-        if verify_input_coin(i) {
-            let coin_asset_id = input_coin_asset_id(i);
-            if (coin_asset_id == NONCE_ASSETID) {
-                return false;
-            }
-        }
-        i += 1;
-    }
-
-    return true;
 }
