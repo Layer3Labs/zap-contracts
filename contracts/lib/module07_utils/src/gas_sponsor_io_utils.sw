@@ -102,7 +102,7 @@ pub fn calcualte_asset_within_tolerance( actual_amount: u64, expected_amount: u6
     let tolerance_amount_bn = (expected_amount_bn * tolerance) / asm(r1: (0, 0, 0, 10000)) { r1: u256 };
     let upper_bound_bn = expected_amount_bn + tolerance_amount_bn;
     let lower_bound_bn = if expected_amount_bn > tolerance_amount_bn { expected_amount_bn - tolerance_amount_bn } else { 0 };
-    let upperb_ovf = is_overflow_u64(upper_bound_bn);
+    assert(!is_overflow_u64(upper_bound_bn));
 
     if actual_amount_bn < lower_bound_bn || actual_amount_bn > upper_bound_bn {
         return false;
