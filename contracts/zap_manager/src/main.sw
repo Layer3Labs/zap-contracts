@@ -18,7 +18,7 @@ use zapwallet_consts::wallet_consts::NUM_MODULES;
 use io_utils::io::find_utxoid_and_owner_by_asset;
 use zap_utils::hex::b256_to_hex;
 use constants::{ KEY00, KEY01, KEY02, KEY03, KEY04, KEY05, KEY06, KEY07, KEY08, KEY_NONCE, NONCE_MAX };
-use tools::{ mint_nonce_asset, mint_module_asset, get_sub_id, get_module_assetid, get_key1 };
+use tools::{ get_nonce_subid_assetid, mint_nonce_asset, mint_module_asset, get_sub_id, get_module_assetid, get_key1 };
 use ::manager::{ZapManager, InitData};
 use ::events::{ ContractStateEvent, InitializeWalletEvent, WalletVersionsEvent, UpgradeEvent };
 
@@ -251,10 +251,10 @@ impl ZapManager for Contract {
                     "Wallet already has Nonce, if error mint assets individually"
                 );
 
-                // Mint nonce asset and store in contract ZapWallet mapping
-                let (nonce_tfr_amt, nonce_assetid) = mint_nonce_asset(owner_evm_addr);
+                // Obtain nonce assetid, mint nonce assets and store key/nonce asset_id mapping data.
+                let (nonce_subid, nonce_assetid) = get_nonce_subid_assetid(owner_evm_addr);
+                let nonce_tfr_amt = mint_nonce_asset(nonce_subid, nonce_assetid);
                 storage.v1_map.insert(key, nonce_assetid);
-
                 // Transfer nonce asset to provided master address
                 transfer( Identity::Address(master_addr), nonce_assetid, nonce_tfr_amt);
 
