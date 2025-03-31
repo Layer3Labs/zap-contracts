@@ -2,7 +2,7 @@ predicate;
 
 use std::{ b512::B512, bytes::Bytes, string::String, hash::{keccak256},
     vm::evm::{ ecr::ec_recover_evm_address, evm_address::EvmAddress },
-    inputs::{ input_count, input_coin_owner }, outputs::{ output_count },
+    inputs::{ input_count, input_coin_owner }, outputs::{ output_count, output_asset_to, output_asset_id },
 };
 use std::primitive_conversions::{u16::*, u64::*};
 use standards::src16::SRC16Payload;
@@ -138,7 +138,7 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
     let owner_zapwallet_addr = v1_predicate.calculate_predicate_address( sender_bytecode, OWNER_ADDRESS );
 
     // Find module05 owner and transaction utxoid
-    let (utxo_id, _module05_owner) = match find_utxoid_and_owner_by_asset(MODULE_KEY05_ASSETID) {
+    let (utxo_id, module05_owner) = match find_utxoid_and_owner_by_asset(MODULE_KEY05_ASSETID) {
         Some((utxoid, owner)) => { (utxoid, owner) },
         None => { (b256::zero(), Address::zero()) }
     };
@@ -178,103 +178,137 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
         let coin_asset_id = input_coin_asset_id(i);
         let coin_asset_amount = input_coin_amount(i);
 
-        // Ignore asset_id coin
-        if (coin_asset_id == MODULE_KEY05_ASSETID) {
-            continue;
-        // If a coin doesnt come from the master predicate, it needs
-        // to have come from the gas sponsor and be a base asset
-        } else if (coin_owner != Address::from(owner_zapwallet_addr)) {
-            assert(
-                is_sponsored &&
-                coin_owner == Address::from(gas_payer) &&
-                coin_asset_id == FUEL_BASE_ASSET
-            );
-        // Otherwise if it came from the master predicate it needs
-        // to be either base or native, depending on the transaction type
-        } else {
-            match (transfer_asset, sponsor_type) {
-                // If this is a base asset trx, regardless of sponsorship, it can only be FUEL_BASE_ASSET
-                (AssetType::Base, _) => {
-                    assert(coin_asset_id == FUEL_BASE_ASSET);
-                    transfer_asset_amount_input = transfer_asset_amount_input + coin_asset_amount;
-                },
-                // If this is an unsponsored native trx it can be either the base asset
-                // or the native asset
-                (AssetType::Native(asset_id), SponsorType::Unsponsored) => {
-                    assert(
-                        coin_asset_id == FUEL_BASE_ASSET ||
-                        coin_asset_id == asset_id
-                    );
-                    if (coin_asset_id == asset_id) {
+        // Only process non-MODULE05_ASSET inputs
+        if (coin_asset_id != MODULE_KEY05_ASSETID) {
+            // If a coin doesn't come from the master predicate, it needs
+            // to have come from the gas sponsor and be a base asset
+            if (coin_owner != Address::from(owner_zapwallet_addr)) {
+                assert(
+                    is_sponsored &&
+                    coin_owner == Address::from(gas_payer) &&
+                    coin_asset_id == FUEL_BASE_ASSET
+                );
+            // Otherwise if it came from the master predicate it needs
+            // to be either base or native, depending on the transaction type
+            } else {
+                match (transfer_asset, sponsor_type) {
+                    // If this is a base asset trx, regardless of sponsorship, it can only be FUEL_BASE_ASSET
+                    (AssetType::Base, _) => {
+                        assert(coin_asset_id == FUEL_BASE_ASSET);
+                        transfer_asset_amount_input = transfer_asset_amount_input + coin_asset_amount;
+                    },
+                    // If this is an unsponsored native trx it can be either the base asset
+                    // or the native asset
+                    (AssetType::Native(asset_id), SponsorType::Unsponsored) => {
+                        assert(
+                            coin_asset_id == FUEL_BASE_ASSET ||
+                            coin_asset_id == asset_id
+                        );
+                        if (coin_asset_id == asset_id) {
+                            transfer_asset_amount_input = transfer_asset_amount_input + coin_asset_amount;
+                        }
+                    },
+                    // If this is a sponsored native trx it can only be the native asset
+                    (AssetType::Native(asset_id), SponsorType::Sponsored(_)) => {
+                        assert(coin_asset_id == asset_id);
                         transfer_asset_amount_input = transfer_asset_amount_input + coin_asset_amount;
                     }
-                },
-                // If this is a sponsored native trx it can only be the native asset
-                (AssetType::Native(asset_id), SponsorType::Sponsored(_)) => {
-                    assert(coin_asset_id == asset_id);
-                    transfer_asset_amount_input = transfer_asset_amount_input + coin_asset_amount;
                 }
             }
         }
 
-        i = i + 1;
+        i += 1;
     }
 
     // ---------- PROCESS AND VERIFY OUTPUTS ------------
 
-    // If this is a non sponsored base asset transfer there will be three outputs. Otherwise
-    // in all cases there will be four outputs
+    // Verify output count based on transaction type
     let expected_outputs: u64 = match (transfer_asset, sponsor_type) {
         (AssetType::Base, SponsorType::Unsponsored) => 3,
         _ => 4,
     };
     assert(output_count().as_u64() == expected_outputs);
 
-    // The first output is always a ChangeOutput of BASE_ASSET back to the gas payer.
-    assert(output_coin_asset_id(0).unwrap() == FUEL_BASE_ASSET);
-    assert(output_coin_to(0) == gas_payer);
-    if !verify_output_change(0).unwrap() { return false; }
+    // There always needs to be a change output to the gas payer at index 0s
+    if verify_output_change(0).unwrap_or(false) {
+        let change_to: b256 = output_asset_to(0).unwrap().into();
+        // the gas_payer will be a b256 (for Base_asset non-sponsored)
+        assert(change_to == gas_payer);
 
-    // In all cases the second output should be a coin output to the transfer recipient
-    // with asset id of the asset to be transferred
+        // also verify that the change output is of assetid BASE_ASSET
+        let change_assetid: b256 = output_asset_id(0).unwrap().into();
+        assert( change_assetid == FUEL_BASE_ASSET);
+
+    } else {
+        // there should always be a change output at index 0
+        return false;
+    }
+
+    // Second output (first coin output): Transfer output to recipient
     if !verify_output_coin(1) { return false; }
-    assert(output_coin_asset_id(1).unwrap() == FUEL_BASE_ASSET);
+    let second_output_asset = match output_coin_asset_id(1) {
+        Some(asset_id) => asset_id,
+        None => return false,
+    };
+
+    match transfer_asset {
+        AssetType::Base => {
+            assert(second_output_asset == FUEL_BASE_ASSET);
+        },
+        AssetType::Native(asset_id) => {
+            assert(second_output_asset == asset_id);
+        }
+    }
 
     let transfer_amount = output_coin_amount(1);
     let transfer_to = output_coin_to(1);
-
-    // Require that the owner master sent at least enough of the asset to be transferred
-    // to cover the transfer.
     assert(transfer_amount <= transfer_asset_amount_input);
 
+    // Third output (second coin output) handling with explicit match cases
     match (transfer_asset, sponsor_type) {
-        // If the transaction is a base transfer and it is sponsored, the third output
-        // will be an OutputCoin of the base asset with amount of the total eth they
-        // sent in as input minus the amount that was transferred
-        (AssetType::Base, SponsorType::Sponsored(_)) => {
-            let expected_value: u64 = transfer_asset_amount_input - transfer_amount;
+        (AssetType::Base, SponsorType::Unsponsored) => {
+            // verify the 3 outputs for base asset non-sponsored
+            assert(output_count().as_u64() == 3);
 
-            if !verify_output_coin(2) { return false; }
-            assert(output_coin_asset_id(2).unwrap() == FUEL_BASE_ASSET);
+            // Simple output verification without complex matching
+            let third_output_asset = output_coin_asset_id(2).unwrap();
+            assert(third_output_asset == MODULE_KEY05_ASSETID);
+            assert(output_coin_amount(2) == 1);
+            assert(Address::from(output_coin_to(2)) == module05_owner);
+        },
+        (AssetType::Base, SponsorType::Sponsored(_)) => {
+            // Verify we have 4 outputs for sponsored base transfer
+            assert(output_count().as_u64() == 4);
+
+            // Verify third output (remaining BASE_ASSET to owner)
+            let expected_value = transfer_asset_amount_input - transfer_amount;
+            let third_output_asset = output_coin_asset_id(2).unwrap();
+            assert(third_output_asset == FUEL_BASE_ASSET);
             assert(output_coin_amount(2) == expected_value);
             assert(output_coin_to(2) == owner_zapwallet_addr);
 
-
+            // Verify fourth output (MODULE05 asset)
+            let fourth_output_asset = output_coin_asset_id(3).unwrap();
+            assert(fourth_output_asset == MODULE_KEY05_ASSETID);
+            assert(output_coin_amount(3) == 1);
+            assert(Address::from(output_coin_to(2)) == module05_owner);
         },
-        // If the transaction is a native transfer the third output will be an OutputChange
-        // of the native asset_id back to the sender
         (AssetType::Native(asset_id), _) => {
+            // Verify we have 4 outputs for native asset transfer
+            assert(output_count().as_u64() == 4);
 
-            if !verify_output_change(0).unwrap() { return false; }
-            assert(output_coin_asset_id(2).unwrap() == asset_id);
+            // Verify third output (remaining native asset to owner)
+            let third_output_asset = output_coin_asset_id(2).unwrap();
+            assert(third_output_asset == asset_id);
             assert(output_coin_to(2) == owner_zapwallet_addr);
 
+            // Verify fourth output (MODULE05 asset)
+            let fourth_output_asset = output_coin_asset_id(3).unwrap();
+            assert(fourth_output_asset == MODULE_KEY05_ASSETID);
+            assert(output_coin_amount(3) == 1);
+            assert(Address::from(output_coin_to(3)) == module05_owner);
         },
-        // Otherwise do nothing (third output is the module 05 asset handled by the master)
-        _ => {}
     }
-
-    // Checking the remaining module 05 master is handled by the master predicate
 
     // ---------- RECONSTRUCT AND VERIFY 712 SIGNATURE  ------------
 
@@ -293,7 +327,10 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
     };
     let encoded_hash = match payload.encode_hash() {
         Some(hash) => hash,
-        None => revert(0),
+        None => {
+            // revert(0)
+            return false;
+        },
     };
     let recovered_adderss = ec_recover_evm_address(signature, encoded_hash).unwrap();
 
