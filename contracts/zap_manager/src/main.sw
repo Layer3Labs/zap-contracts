@@ -20,7 +20,7 @@ use zap_utils::hex::b256_to_hex;
 use constants::{ KEY00, KEY01, KEY02, KEY03, KEY04, KEY05, KEY06, KEY07, KEY08, KEY_NONCE, NONCE_MAX };
 use tools::{ get_nonce_subid_assetid, mint_nonce_asset, mint_module_asset, get_sub_id, get_module_assetid, get_key1 };
 use ::manager::{ZapManager, InitData};
-use ::events::{ ContractStateEvent, InitializeWalletEvent, WalletVersionsEvent, UpgradeEvent };
+use ::events::{ ContractStateEvent, InitializeWalletEvent, WalletVersionsEvent, UpgradeEvent, OwnershipTransferEvent };
 
 
 /// The owner of this contract at deployment.
@@ -75,7 +75,30 @@ impl ZapManager for Contract {
     fn transfer_ownership(new_owner: Identity) {
         // Only current owner can transfer ownership
         require_owner();
+        // Check that new owner is not zero address
+        match new_owner {
+            Identity::Address(addr) => {
+                require(
+                    addr != Address::zero(),
+                    "Error: New owner cannot be the zero address"
+                );
+            },
+            Identity::ContractId(id) => {
+                require(
+                    id != ContractId::zero(),
+                    "Error: New owner cannot be the zero contract ID"
+                );
+            },
+        }
+        // Store current owner to emit in event
+        let previous_owner = storage.owner.read();
+        // Update owner in storage
         storage.owner.write(State::Initialized(new_owner));
+
+        // Emit ownership transfer event
+        if let State::Initialized(prev_owner) = previous_owner {
+            OwnershipTransferEvent::new(prev_owner, new_owner).log();
+        }
     }
 
     /// Returns the current ownership status of the contract and owner identity if initialized.
