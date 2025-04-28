@@ -13,21 +13,26 @@ use ::constants::{
     NONCE_MAX, KEY_NONCE,
 };
 
-
-pub fn mint_nonce_asset(
+pub fn get_nonce_subid_assetid(
     evm_addr: EvmAddress,
-) -> (u64, AssetId) {
+) -> (b256, AssetId) {
 
     let sub_id: b256 = get_sub_id(evm_addr, KEY_NONCE);
     log(sub_id);
 
-    // calculated nonce assetid and checks that the current contract
-    // has a zero balance of the asset.
-    let modaid = AssetId::new(ContractId::this(), sub_id);
-    log(modaid);
+    // return sub_id and calculated nonce assetid
+    (sub_id, AssetId::new(ContractId::this(), sub_id))
+}
 
-    assert(this_balance(modaid) == 0);
-    log(this_balance(modaid));
+pub fn mint_nonce_asset(
+    sub_id: b256,
+    nonce_assetid: AssetId,
+) -> u64 {
+
+    // Check contract has a zero balance of the nonce asset.
+    log(nonce_assetid);
+    assert(this_balance(nonce_assetid) == 0);
+    log(this_balance(nonce_assetid));
 
     // Mints the maximum number of nonce token and send this amount minus one
     // to the prediacte master. Leaves 1 token owned by the ZapManager so the
@@ -35,10 +40,7 @@ pub fn mint_nonce_asset(
     let mut mint_amount: u64 = NONCE_MAX;
     mint(sub_id, mint_amount);
 
-    (
-        (NONCE_MAX - 1),
-        AssetId::new(ContractId::this(), sub_id)
-    )
+    (NONCE_MAX - 1)
 }
 
 pub fn mint_module_asset(
@@ -62,11 +64,7 @@ pub fn mint_module_asset(
     let mut mint_amount: u64 = 1;
     mint(sub_id, mint_amount);
 
-    transfer(
-        Identity::Address(module_addr),    // send to the Module Address.
-        AssetId::new(ContractId::this(), sub_id),
-        mint_amount      // send the unit amount to the Module Address.
-    );
+    transfer( Identity::Address(module_addr), AssetId::new(ContractId::this(), sub_id), mint_amount );
 
 }
 
@@ -76,9 +74,7 @@ pub fn get_sub_id(
 ) -> b256 {
 
     let mut result_buffer = b256::zero();
-    asm(n_id: result_buffer, ptr: (evm_addr, key), bytes: 64) {
-        s256 n_id ptr bytes;
-    };
+    asm(n_id: result_buffer, ptr: (evm_addr, key), bytes: 64) { s256 n_id ptr bytes; };
 
     return(result_buffer);
 }
@@ -94,16 +90,13 @@ pub fn get_module_assetid(
     assetid
 }
 
-
 pub fn get_key1(
     evm_addr: EvmAddress,
     master_addr: Address,
 ) -> b256 {
 
     let mut result_buffer = b256::zero();
-    asm(n_id: result_buffer, ptr: (evm_addr, master_addr), bytes: 64) {
-        s256 n_id ptr bytes;
-    };
+    asm(n_id: result_buffer, ptr: (evm_addr, master_addr), bytes: 64) { s256 n_id ptr bytes; };
 
     return(result_buffer);
 }

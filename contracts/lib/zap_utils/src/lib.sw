@@ -7,6 +7,7 @@ pub mod merkle_utils;
 
 pub mod personal_sign_string;
 pub mod personal_sign;
+pub mod personal_sign_v2;
 
 pub mod decode_legacy;
 pub mod decode_1559;

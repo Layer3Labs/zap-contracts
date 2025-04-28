@@ -98,3 +98,19 @@ impl UpgradeEvent {
         log(self);
     }
 }
+
+/// Event emitted when ownership is transferred
+pub struct OwnershipTransferEvent {
+    previous_owner: Identity,
+    new_owner: Identity,
+}
+
+impl OwnershipTransferEvent {
+    pub fn new(previous_owner: Identity, new_owner: Identity) -> Self {
+        Self { previous_owner, new_owner }
+    }
+
+    pub fn log(self) {
+        log(self);
+    }
+}

@@ -8,7 +8,7 @@ use std::{
     inputs::input_count,
 };
 use zap_utils::{
-    personal_sign::personal_sign_hash,
+    personal_sign_v2::personal_sign_hash_v2,
     transaction_utls::{verify_input_coin, input_coin_asset_id},
 };
 
@@ -59,7 +59,7 @@ fn main(witness_index: u64) -> bool {
     }
 
     let signature: B512 = tx_witness_data(witness_index).unwrap();
-    let result = ec_recover_evm_address(signature, personal_sign_hash(tx_id()));
+    let result = ec_recover_evm_address(signature, personal_sign_hash_v2(tx_id()));
     if result.is_ok() {
         if OWNER_ADDRESS == result.unwrap().into() {
             return true;

@@ -30,6 +30,7 @@ use constants::{
     KEY_NONCE, NONCE_MAX,
 };
 use tools::{
+    get_nonce_subid_assetid,
     mint_nonce_asset,
     mint_module_asset,
     get_sub_id,
@@ -42,12 +43,14 @@ use ::events::{
     InitializeWalletEvent,
     WalletVersionsEvent,
     UpgradeEvent,
+    OwnershipTransferEvent,
 };
 
 
 /// The owner of this contract at deployment.
 #[allow(dead_code)]
 const DEPLOYER_ADDRESS: b256 = 0x2891970ee5132e3523f80b2bde241b75285715359fc4209728812eed35e61fa8;
+// const DEPLOYER_ADDRESS: b256 = 0x50b83b2864c526d388d9cb9fe441025c1ae6a9d31288064ad48a80784844e1f9;
 #[allow(dead_code)]
 const INITIAL_OWNER: Identity = Identity::Address(Address::from(DEPLOYER_ADDRESS));
 
@@ -101,7 +104,30 @@ impl ZapManager for Contract {
     fn transfer_ownership(new_owner: Identity) {
         // Only current owner can transfer ownership
         require_owner();
+        // Check that new owner is not zero address
+        match new_owner {
+            Identity::Address(addr) => {
+                require(
+                    addr != Address::zero(),
+                    "Error: New owner cannot be the zero address"
+                );
+            },
+            Identity::ContractId(id) => {
+                require(
+                    id != ContractId::zero(),
+                    "Error: New owner cannot be the zero contract ID"
+                );
+            },
+        }
+        // Store current owner to emit in event
+        let previous_owner = storage.owner.read();
+        // Update owner in storage
         storage.owner.write(State::Initialized(new_owner));
+
+        // Emit ownership transfer event
+        if let State::Initialized(prev_owner) = previous_owner {
+            OwnershipTransferEvent::new(prev_owner, new_owner).log();
+        }
     }
 
     /// Returns the current ownership status of the contract and owner identity if initialized.
@@ -259,11 +285,7 @@ impl ZapManager for Contract {
     ///   * is_base_modules: true for InitModules, false for NewModule
     ///
     #[storage(read, write)]
-    fn initialize_wallet(
-        master_addr: Address,
-        owner_evm_addr: EvmAddress,
-        initdata: InitData,
-    ) -> EvmAddress {
+    fn initialize_wallet( master_addr: Address, owner_evm_addr: EvmAddress, initdata: InitData, ) -> EvmAddress {
         // Contract pause check
         require(!_is_paused(), "Contract is paused");
 
@@ -281,16 +303,12 @@ impl ZapManager for Contract {
                     "Wallet already has Nonce, if error mint assets individually"
                 );
 
-                // Mint nonce asset and store in contract ZapWallet mapping
-                let (nonce_tfr_amt, nonce_assetid) = mint_nonce_asset(owner_evm_addr);
+                // Obtain nonce assetid, mint nonce assets and store key/nonce asset_id mapping data.
+                let (nonce_subid, nonce_assetid) = get_nonce_subid_assetid(owner_evm_addr);
+                let nonce_tfr_amt = mint_nonce_asset(nonce_subid, nonce_assetid);
                 storage.v1_map.insert(key, nonce_assetid);
-
                 // Transfer nonce asset to provided master address
-                transfer(
-                    Identity::Address(master_addr),
-                    nonce_assetid,
-                    nonce_tfr_amt
-                );
+                transfer( Identity::Address(master_addr), nonce_assetid, nonce_tfr_amt);
 
                 // Mint and transfer all base module assets to provided module addresses
                 let module_addrs = base_mods.module_addrs;
@@ -303,11 +321,7 @@ impl ZapManager for Contract {
                 }
 
                 // Emit initialization event
-                InitializeWalletEvent::new(
-                    master_addr,
-                    owner_evm_addr,
-                    true  // Full initialization
-                ).log();
+                InitializeWalletEvent::new( master_addr, owner_evm_addr, true).log();
             },
             InitData::NewModule(module) => {
                 // The asset for `key` should be sent to the provided module address.
@@ -337,11 +351,7 @@ impl ZapManager for Contract {
                 mint_module_asset(owner_evm_addr, key, Address::from(module_addr));
 
                 // Emit the module mint event
-                InitializeWalletEvent::new(
-                    master_addr,
-                    owner_evm_addr,
-                    false  // false indicates this was not a full initialization
-                ).log();
+                InitializeWalletEvent::new( master_addr, owner_evm_addr, false).log();
             },
 
 
