@@ -1,3 +1,3 @@
 library;
 
-pub mod native_transfer;
+pub mod native_transfer_v1;
