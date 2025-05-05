@@ -18,7 +18,7 @@ use zap_utils::{
     hex::*,
     string_helpers::*,
 };
-use module05_utils::native_transfer::{
+use module05_utils::native_transfer_v1::{
     NativeTransfer,
 };
 use standards::src16::{
@@ -34,9 +34,9 @@ use standards::src16::{
 
 
 const TEST_CONST_NATIVE_TRANSFER_DOMAIN_SEP_HASH: b256 = 0x6744d60a1be36c90e65970c7c85081afc0249849dee1952af299de75ae3ac218;
-const TEST_CONST_NATIVE_TRANSFER_TYPE_HASH: b256 = 0xdbb904c4c25f238b71c43a55db0492150688fd29ddacf2136609ccd9621091d4;
-const TEST_CONST_NATIVE_TRANSFER_STRUCT_HASH: b256 = 0x5c2944c34b5c1692b9d633d020455bc2edf9f3961b7e968c04c3cdb85328877b;
-const TEST_CONST_NATIVE_TRANSFER_ENCODED_HASH: b256 = 0x1ab07018f317fe5d14955f12b8558f32550d3bb00a35a8d273b00e70f1fd0e5a;
+const TEST_CONST_NATIVE_TRANSFER_TYPE_HASH: b256 = 0x08ce60fbaed7c5d3f4b3c926fe52992f1fc80905f58361603381e83cf472d3ac;
+const TEST_CONST_NATIVE_TRANSFER_STRUCT_HASH: b256 = 0xbcd6915db572ccc1616e177939263fb9f1f34d43965265c4f081f7e3b967dba5;
+const TEST_CONST_NATIVE_TRANSFER_ENCODED_HASH: b256 = 0xb4e4d175c3fa13d1715c82a67384fe59da130115565f287fde141282426298fa;
 const TEST_CONST_EVM_SINGER: b256 = 0x000000000000000000000000333339d42a89028ee29a9e9f4822e651bac7ba14;
 
 // forc test test_51_nativetransfer_domain_hash --logs
@@ -116,7 +116,7 @@ fn test_55_nativetransfer_recover_signer(){
         Some(hash) => hash,
         None => revert(0),
     };
-    let mut compactsig_hex_string = String::from_ascii_str("9cf40bc612f6755010e1917e9795da7140d59c222dbbda16a9909c20541430014676119dc3f17dbe9afb20ba0ec6f9a4b4d5ae1b8e373b5bf929368f1995a267");
+    let mut compactsig_hex_string = String::from_ascii_str("9d6e3d105654e5b02481fb95ae3a91f583856317c22dc1e1d2561f683fe106d0f2440274ee5bd27648ff486e14f97150eb07088e581b79d1d5a3d21164b9f274");
     let compactsig_bytes = hex_string_to_bytes(compactsig_hex_string).unwrap();
     let mut ptr: u64 = 0;
     let (cs_lhs, ptr) = bytes_read_b256(compactsig_bytes, ptr, 32);
@@ -132,12 +132,12 @@ fn test_55_nativetransfer_recover_signer(){
 }
 
 fn get_setup_tx() -> NativeTransfer {
-    let dummy_asset_id: b256 = 0x0606060606060606060606060606060606060606060606060606060606060606;
-    let dummy_amount: u256 = asm(r1: (0, 0, 0, 1_000_000_000u64)) { r1: u256 };    // 1_000_000_000u64
-    let dummy_from: b256 = 0xdadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadada;
-    let dummy_to: b256 = 0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef;
-    let dummy_max_tx_cost: u256 = asm(r1: (0, 0, 0, 333)) { r1: u256 };   // 333u64
-    let dummy_utxo_id: b256 = 0x8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c;
+    let dummy_asset_id: b256 = 0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07;
+    let dummy_amount: u256 = asm(r1: (0, 0, 0, 7001u64)) { r1: u256 };
+    let dummy_from: b256 = 0xee5e3b4a86cfc0056e7367b61f653343e9713e77e30cbe35e055effff2fa6e86;
+    let dummy_to: b256 = 0x4438d0537dbc347a8e8f591df8d8908b3588265b716b1829649f85b871ee021b;
+    let dummy_max_tx_cost: u256 = asm(r1: (0, 0, 0, 0)) { r1: u256 };
+    let dummy_utxo_id: b256 = 0x7db4af4d9f3db52067113412f16d39b839fa796935bb51690a62c1670d8d09c6;
 
     NativeTransfer::new(
         dummy_asset_id,
