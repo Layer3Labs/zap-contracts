@@ -291,17 +291,36 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
             let fourth_output_asset = output_coin_asset_id(3).unwrap();
             assert(fourth_output_asset == MODULE_KEY05_ASSETID);
             assert(output_coin_amount(3) == 1);
-            assert(Address::from(output_coin_to(2)) == module05_owner);
+            assert(Address::from(output_coin_to(3)) == module05_owner);
         },
-        (AssetType::Native(asset_id), _) => {
+        (AssetType::Native(asset_id), SponsorType::Unsponsored) => {
             // Verify we have 4 outputs for native asset transfer
             assert(output_count().as_u64() == 4);
 
-            // Verify third output (remaining native asset to owner)
-            let third_output_asset = output_coin_asset_id(2).unwrap();
-            assert(third_output_asset == asset_id);
-            assert(output_coin_to(2) == owner_zapwallet_addr);
+            // Verify third output is change (remaining native asset to owner)
+            if verify_output_change(2).unwrap_or(false) {
+                let change_output_to: b256 = output_asset_to(2).unwrap().into();
+                assert(change_output_to == owner_zapwallet_addr);
+                let change_assetid: b256 = output_asset_id(2).unwrap().into();
+                assert( change_assetid == asset_id);
+            }
 
+            // Verify fourth output (MODULE05 asset)
+            let fourth_output_asset = output_coin_asset_id(3).unwrap();
+            assert(fourth_output_asset == MODULE_KEY05_ASSETID);
+            assert(output_coin_amount(3) == 1);
+            assert(Address::from(output_coin_to(3)) == module05_owner);
+        },
+        (AssetType::Native(asset_id), SponsorType::Sponsored(_)) => {
+            // Verify we have 4 outputs for native asset transfer
+            assert(output_count().as_u64() == 4);
+            // Verify third output is change (remaining native asset to owner)
+            if verify_output_change(2).unwrap_or(false) {
+                let change_output_to: b256 = output_asset_to(2).unwrap().into();
+                assert(change_output_to == owner_zapwallet_addr);
+                let change_assetid: b256 = output_asset_id(2).unwrap().into();
+                assert( change_assetid == asset_id);
+            }
             // Verify fourth output (MODULE05 asset)
             let fourth_output_asset = output_coin_asset_id(3).unwrap();
             assert(fourth_output_asset == MODULE_KEY05_ASSETID);
