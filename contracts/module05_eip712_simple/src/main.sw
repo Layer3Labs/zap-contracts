@@ -8,7 +8,7 @@ use std::primitive_conversions::{u16::*, u64::*};
 use standards::src16::SRC16Payload;
 use module05_utils::native_transfer::{ NativeTransfer, get_domain_separator };
 use zap_utils::{ merkle_utils::{MerkleUtils, V1Predicate},
-    transaction_utls::{ input_coin_amount, input_coin_asset_id, verify_output_change, verify_input_coin, verify_output_coin, output_coin_asset_id, output_coin_to, output_coin_amount } };
+    transaction_utls::{ input_coin_amount, input_coin_asset_id, verify_output_change, verify_input_coin, verify_output_coin, output_coin_asset_id, output_coin_to, output_coin_amount }, blob_utils::*, };
 use io_utils::io::{find_utxoid_and_owner_by_asset, verify_no_nonce_assets};
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 
@@ -23,6 +23,8 @@ configurable {
     /// Compile version identifier into bytecode.
     #[allow(dead_code)]
     VERSION: b256 = b256::zero(),
+    /// Master Blob ID as a b256.
+    MASTER_BLOB_ID: b256 = b256::zero(),
 }
 
 
@@ -131,11 +133,17 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
         return false;
     }
 
-    // Calculate the senders v1 predicate address
-    // Specific bytecode bytes from receivers zapwallet master.
-    let mut sender_bytecode = sender_wallet_bytecode;
-    let v1_predicate = V1Predicate::new();
-    let owner_zapwallet_addr = v1_predicate.calculate_predicate_address( sender_bytecode, OWNER_ADDRESS );
+    // Calculate the v1 master predicate address using the owners
+    // evm address from configurables
+    let master_blob_info = MasterBlob {
+        blob_id: MASTER_BLOB_ID,
+        section_len: 640,
+        configurables: sender_wallet_bytecode,
+        owner_addr: OWNER_ADDRESS,
+    };
+
+    // Blob Predicate addr
+    let owner_zapwallet_addr = calculate_master_blob_addr(master_blob_info);
 
     // Find module05 owner and transaction utxoid
     let (utxo_id, module05_owner) = match find_utxoid_and_owner_by_asset(MODULE_KEY05_ASSETID) {

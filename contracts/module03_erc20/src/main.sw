@@ -25,6 +25,8 @@ configurable {
     /// Compile version identifier into bytecode.
     #[allow(dead_code)]
     VERSION: b256 = b256::zero(),
+    /// Master Blob ID as a b256.
+    MASTER_BLOB_ID: b256 = b256::zero(),
 }
 
 
@@ -122,7 +124,7 @@ fn main( signed_evm_tx: Bytes, receiver_wallet_bytecode: Bytes ) -> bool {
     };
 
     // Process the outputs:
-    let final_result = match process_src20_output_assets( tx_outputs, tx_change, ip_result, tx_ct_amount.into(), NONCE_ASSETID, (exp_nonce_inp_val - 1), tx_ct_to, receiver_bytecode ) {
+    let final_result = match process_src20_output_assets( tx_outputs, tx_change, ip_result, tx_ct_amount.into(), NONCE_ASSETID, (exp_nonce_inp_val - 1), tx_ct_to, receiver_bytecode, MASTER_BLOB_ID ) {
         Ok(result) => { result },
         Err(_error_code) => { false },
     };

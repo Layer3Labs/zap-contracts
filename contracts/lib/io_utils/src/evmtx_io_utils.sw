@@ -6,8 +6,8 @@ use zapwallet_consts::wallet_consts::{
 };
 use ::io::InpOut;
 use zap_utils::{
-    merkle_utils::{MerkleUtils, V1Predicate},
     wei_to_eth::wei_to_eth,
+    blob_utils::*,
 };
 
 
@@ -207,6 +207,7 @@ pub fn verify_change_output( tx_change_assets: Vec<InpOut>, expected_change_asse
 /// * `receiver_code` - The bytecode of the receiver's ZapWallet as mutable Bytes
 /// * `receiver_evm_addr` - The EVM address (as b256) from the EVM transaction data
 /// * `receiving_addr` - The receiving address (as b256) from the Fuel transaction
+/// * `master_blob_id` - The Master Blob ID
 ///
 /// # Returns
 ///
@@ -218,21 +219,23 @@ pub fn verify_change_output( tx_change_assets: Vec<InpOut>, expected_change_asse
 /// 2. Calculating the master address from the modified bytecode.
 /// 3. Comparing the calculated master address with the receiving address.
 ///
-pub fn verify_receiver( ref mut receiver_code: Bytes, receiver_evm_addr: b256, receiving_addr: b256,) -> bool {
+pub fn verify_receiver( ref mut receiver_code: Bytes, receiver_evm_addr: b256, receiving_addr: b256, master_blob_id: b256) -> bool {
 
     // Calculate the v1 predicate address
-    let v1_predicate = V1Predicate::new();
-    let v1_wallet_addr = v1_predicate.calculate_predicate_address(
-        receiver_code,
-        receiver_evm_addr
-    );
+    let master_blob_info = MasterBlob {
+        blob_id: master_blob_id,
+        section_len: 640,
+        configurables: receiver_code,   // the configurables
+        owner_addr: receiver_evm_addr,
+    };
+
+    // Blob Predicate addr
+    let v1_wallet_addr = calculate_master_blob_addr(master_blob_info);
 
     if receiving_addr == v1_wallet_addr {
         return true;
     }
-    return false;
 
-    //NOTE - DEBUG:
-    // return true;
+    return false;
 }
 

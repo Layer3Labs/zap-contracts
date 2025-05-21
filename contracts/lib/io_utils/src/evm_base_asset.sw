@@ -165,7 +165,7 @@ pub struct OutputProcessingResult {
 /// The `receiver_code` should be only the 2nd leaf in from the master predicate bytecode, populated
 /// with the configurables specific to the receiver.
 ///
-pub fn process_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: InputProcessingResult, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes ) -> Result<OutputProcessingResult, u64> {
+pub fn process_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: InputProcessingResult, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes, blob_id: b256 ) -> Result<OutputProcessingResult, u64> {
 
     // Ensure sure there is an output for the receiver that is enough to cover the amount
     // specified in the signed transaction bytes.
@@ -189,7 +189,7 @@ pub fn process_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: V
                     if out_amt == ip_result.amount_fueleth {
                         // Verify that the base asset receiving address is the ZapWallet
                         // receiver mapped to the receiving evm address in the signed rlp bytes.
-                        receiver_output_found = verify_receiver( receiver_code, tx_receiver, output.owner.unwrap().into() );
+                        receiver_output_found = verify_receiver( receiver_code, tx_receiver, output.owner.unwrap().into(), blob_id );
                     }
                     if out_amt <= ip_result.max_cost_fueleth {
                         builder_tip_output_found = true;

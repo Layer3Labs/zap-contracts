@@ -4,6 +4,7 @@ pub mod hex;
 pub mod string_helpers;
 
 pub mod merkle_utils;
+pub mod blob_utils;
 
 pub mod personal_sign_string;
 pub mod personal_sign;

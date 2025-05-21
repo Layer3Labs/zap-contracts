@@ -262,7 +262,7 @@ pub fn process_src20_input_assets( tx_input_assets: Vec<InpOut>, expected_src20_
 ///   - 3076: Missing nonce output owner
 ///   - 3077: Missing nonce output amount
 ///
-pub fn process_src20_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: SRC20InputProcessingResult, receiver_src20_amount: u256, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes,) -> Result<bool, u64> {
+pub fn process_src20_output_assets( tx_output_assets: Vec<InpOut>, tx_change_assets: Vec<InpOut>, ip_result: SRC20InputProcessingResult, receiver_src20_amount: u256, nonce_assetid: b256, nonce_target_val: u64, tx_receiver: b256, ref mut receiver_code: Bytes, blob_id: b256) -> Result<bool, u64> {
 
     // Ensure sure there is an src20 output for the receiver that is enough to
     // cover receiver src20 amount (u256)
@@ -274,7 +274,7 @@ pub fn process_src20_output_assets( tx_output_assets: Vec<InpOut>, tx_change_ass
                     let mut out_amt = asm(r1: (0, 0, 0, amount)) { r1: u256 };
                     if out_amt == receiver_src20_amount {
                         // verify that the output for the src20 asset is to the receiver.
-                        if !verify_receiver( receiver_code,tx_receiver, output.owner.unwrap().into(), ) { return Err(3070u64); }
+                        if !verify_receiver( receiver_code,tx_receiver, output.owner.unwrap().into(), blob_id ) { return Err(3070u64); }
                     }
                 }
                 None => { continue; }
