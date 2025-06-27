@@ -359,7 +359,13 @@ fn main( signature: B512, transfer_asset: AssetType, sponsor_type: SponsorType, 
             return false;
         },
     };
-    let recovered_adderss = ec_recover_evm_address(signature, encoded_hash).unwrap();
+    let recovered_adderss = match ec_recover_evm_address(signature, encoded_hash) {
+        Ok(signer) => signer,
+        Err(_) => {
+            // return false for a any error in signature recovery
+            return false;
+        }
+    };
 
     return (recovered_adderss == EvmAddress::from(OWNER_ADDRESS));
 }

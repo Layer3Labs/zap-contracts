@@ -8,6 +8,8 @@ use std::{
     bytes_conversions::{b256::*},
 };
 
+use zap_utils::hex::*;
+
 /// ================================================================================================
 /// CONFIRMED VULNERABILITY: ZERO VALUES SIGNATURE ATTACK
 /// SEVERITY: MEDIUM

@@ -183,8 +183,13 @@ fn main(op: SponsorOp) -> bool {
     // Encode and hash rebuilt GasSponsor struct and recover signer:
     let payload = SRC16Payload { domain: get_domain_separator(), data_hash: rebuilt_gassponsor.struct_hash() };
     let encoded_hash = match payload.encode_hash() { Some(hash) => hash, None => {return false;} };
-    let recovered_signer: b256 = ec_recover_evm_address(compactsig, encoded_hash).unwrap().into();
-    //TODO - handle error.
+    let recovered_signer: b256 = match ec_recover_evm_address(compactsig, encoded_hash) {
+        Ok(signer) => signer.into(),
+        Err(_) => {
+            // return false for a any error in signature recovery
+            return false;
+        }
+    };
     if recovered_signer == OWNER_ADDRESS { return true; }
 
     return false;
