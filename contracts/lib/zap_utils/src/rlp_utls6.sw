@@ -270,20 +270,17 @@ pub fn rlp_decode_transfer_bytes(data: Bytes, ptr: u64, num_bytes: u64) -> (b256
 /// * [u8] - Normalized recovery ID (0, 1, or 4 for invalid)
 ///
 pub fn normalize_recovery_id(v: u64) -> u8 {
-    match v {
-        0 => return(0u8),
-        1 => return(1u8),
-        27 => return(0u8),
-        28 => return(1u8),
-        _ => {
-            if v >= 35 {
-                let x = ((v - 1) % 2);
-                return(x.try_as_u8().unwrap());
-            } else {
-                return(4u8);
-            }
-        },
-        // _ => 4,
+    if v <= 26 {
+        return (v % 4).try_as_u8().unwrap();
+    } else if v >= 27 && v <= 34 {
+        return ((v - 27) % 4).try_as_u8().unwrap();
+    } else {
+        // v >= 35 (EIP-155)
+        if v >= 35 {
+            ((v - 1) % 2).try_as_u8().unwrap()
+        } else {
+            4u8  // Invalid indicator
+        }
     }
 }
 

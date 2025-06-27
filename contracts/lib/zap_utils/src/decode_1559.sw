@@ -134,6 +134,12 @@ pub fn decode_signed_typedtx_1559(signed_tx: Bytes) -> DecodeType02RLPResult {
     // remaining three items are v, r, s
     let (ptr, len) = rlp_decode_item(signed_tx, ptr + len);
     let v = rlp_read_u64(signed_tx, ptr, len);
+
+    // Verify v is valid (must be 0 or 1 for EIP-1559)
+    if v > 1 {
+        return DecodeType02RLPResult::Fail(2010u64); // Invalid signature y-parity
+    }
+
     let (ptr, len) = rlp_decode_item(signed_tx, ptr + len);
     let r = rlp_read_b256(signed_tx, ptr, len);
     let (ptr, len) = rlp_decode_item(signed_tx, ptr + len);
@@ -150,7 +156,13 @@ pub fn decode_signed_typedtx_1559(signed_tx: Bytes) -> DecodeType02RLPResult {
     // use signature to get the "from" public key
     // let sig = compact_signature(r, s, v);
     let sig = compact_signature_normalize(r, s, v);
-    let from: b256 = ec_recover_evm_address(sig, digest).unwrap().into();
+    let from: b256 = match ec_recover_evm_address(sig, digest) {
+        Ok(signer) => signer.into(),
+        Err(_) => {
+            // return error code for a any error in signature recovery
+            return DecodeType02RLPResult::Fail(2051u64);
+        }
+    };
 
     DecodeType02RLPResult::Success(( type_identifier, chain_id, nonce, maxFeePerGas, gasLimit, value, to, asset_id, digest, len, ptr_tx_data_start, ptr_tx_data_end, sig, from, ))
 }

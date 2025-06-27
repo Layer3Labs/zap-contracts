@@ -132,7 +132,13 @@ pub fn verify_init_struct(in_count: u64, out_count: u64, op: WalletOp, owner_add
 
         let init = Initialization::new( String::from_ascii_str("ZapWalletInitialize"), op.evm_addr, utxoid, );
         let encoded_hash = Initialization::encode(init);
-        let recovered_signer: b256 = ec_recover_evm_address(compactsig, encoded_hash).unwrap().into();
+        let recovered_signer: b256 = match ec_recover_evm_address(compactsig, encoded_hash) {
+            Ok(signer) => signer.into(),
+            Err(_) => {
+                // return false for a any error in signature recovery
+                return false;
+            }
+        };
 
         return (recovered_signer == owner_address);
     } else {

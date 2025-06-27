@@ -24,6 +24,7 @@ use ::rlp_utls6::{
     rlp_read_b256,
     rlp_read_bytes_to_u256,
     compact_signature_normalize,
+    normalize_recovery_id,
     RLP_PAYLOAD_IDENTIFIER_IMMEDIATE_START,
     RLP_ITEM_IDENTIFIER_IMMEDIATE_START,
 };
@@ -121,12 +122,28 @@ pub fn decode_signed_legacy_tx(signed_tx: Bytes) -> DecodeLegacyRLPResult {
     let ptr = ptr + len + 1;
     let (ptr, len) = rlp_decode_item(signed_tx, ptr);
 
-    let v_chain_id = rlp_read_u64(signed_tx, ptr, len);
+    let v_sig = rlp_read_u64(signed_tx, ptr, len);
+
+    // Extract recovery ID from v value
+    let recovery_id = normalize_recovery_id(v_sig);
+
+    // Validate recovery ID (should be 0 or 1 for valid signatures)
+    if recovery_id > 1 {
+        // Invalid recovery ID for standard signatures
+        return DecodeLegacyRLPResult::Fail(2000u64);  // invalid recovery ID
+    }
 
     // convert chain id w.r.t EIP-155
     let mut chain_id = 0;
-    if v_chain_id >= 35 {
-        chain_id = ((v_chain_id - 35) >> 1);
+    if v_sig >= 35 {
+        chain_id = ((v_sig - 35) >> 1);
+
+        // Verify the v value is consistent with the extracted chain_id and recovery_id
+        let expected_v = 35 + (chain_id * 2) + recovery_id.as_u64();
+        if expected_v != v_sig {
+            // V value doesn't match expected calculation
+            return DecodeLegacyRLPResult::Fail(2001u64);  // v mismatch
+        }
     }
 
     // The ptr value below is pointing to the first byte of v_chian_id,
@@ -134,7 +151,7 @@ pub fn decode_signed_legacy_tx(signed_tx: Bytes) -> DecodeLegacyRLPResult {
     // i.e. ptr includs the rlp prefix for the chainid data.
     let ptr_payload_end = ptr;
 
-    //REVIEW - the v_chain_id bytes length, may not be the same length as the bytes calcualted below.
+    //REVIEW - the v_sig bytes length, may not be the same length as the bytes calcualted below.
     //TODO - get the ptr, reverse it one byte, work out how many bytes long the original cahinid data is.
     // its probably likley that this does not exceed the rlp encoding byte limit. so if it was
     // for example  1 - 10 bytes it should be ok. Either way, need constrain this.
@@ -176,8 +193,14 @@ pub fn decode_signed_legacy_tx(signed_tx: Bytes) -> DecodeLegacyRLPResult {
         );
 
     // Construct the Signature from (r, s, v) and get the "from" public key
-    let sig = compact_signature_normalize(r, s, v_chain_id);
-    let from: b256 = ec_recover_evm_address(sig, digest).unwrap().into();
+    let sig = compact_signature_normalize(r, s, v_sig);
+    let from: b256 = match ec_recover_evm_address(sig, digest) {
+        Ok(signer) => signer.into(),
+        Err(_) => {
+            // return error code for a any error in signature recovery
+            return DecodeLegacyRLPResult::Fail(2051u64);
+        }
+    };
 
     let asset_id = b256::zero();
 
