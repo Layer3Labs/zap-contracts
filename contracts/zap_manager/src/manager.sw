@@ -65,4 +65,7 @@ abi ZapManager {
     /// Checks if the given EVM address has upgraded their wallet.
     fn has_upgraded(evm_addr: EvmAddress) -> bool;
 
+    // Copies the initial owner to storage
+    #[storage(read, write)]
+    fn initialize();
 }

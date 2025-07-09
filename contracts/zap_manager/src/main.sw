@@ -26,12 +26,14 @@ use ::events::{ ContractStateEvent, InitializeWalletEvent, WalletVersionsEvent, 
 /// The owner of this contract at deployment.
 #[allow(dead_code)]
 const DEPLOYER_ADDRESS: b256 = 0x2891970ee5132e3523f80b2bde241b75285715359fc4209728812eed35e61fa8;
-#[allow(dead_code)]
-const INITIAL_OWNER: Identity = Identity::Address(Address::from(DEPLOYER_ADDRESS));
+
+configurable {
+    INITIAL_OWNER: Identity = Identity::Address(Address::from(DEPLOYER_ADDRESS))
+}
 
 storage {
     /// The owner of the contract.
-    owner: State = State::Initialized(INITIAL_OWNER),
+    owner: State = State::Uninitialized,
     /// Maps a unique wallet identifier to its nonce asset.
     /// Key is sha256(evm_addr || master_addr) -> nonce AssetId.
     v1_map: StorageMap<b256, AssetId> = StorageMap {},
@@ -493,6 +495,15 @@ impl ZapManager for Contract {
 
         // Check if geq 1 unit is held by this contract
         return this_balance(AssetId::from(upgrade_module_assetid)) >= 1;
+    }
+
+    #[storage(read, write)]
+    fn initialize() {
+        // get the current owner
+        let owner = storage.owner.read();
+        if (owner == State::Uninitialized) {
+          storage.owner.write(State::Initialized(INITIAL_OWNER));
+        }
     }
 
 }
