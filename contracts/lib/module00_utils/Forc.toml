@@ -1,9 +1,0 @@
-[project]
-authors = ["Antony <antony@l3labs.org>"]
-entry = "lib.sw"
-license = "Apache-2.0"
-name = "module00_utils"
-
-[dependencies]
-zap_utils = { path = "../zap_utils" }
-io_utils = { path = "../io_utils" }
