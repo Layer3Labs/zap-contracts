@@ -1,0 +1,15 @@
+[workspace]
+members = [
+  "module00",
+  "module01",
+  "module02",
+  "module03",
+  "module04",
+  "module05",
+  "module06",
+  "module07",
+  "module08",
+  "master",
+  "zap_manager",
+  "tests",
+]

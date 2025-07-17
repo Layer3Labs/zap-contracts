@@ -1,0 +1,6 @@
+[toolchain]
+channel = "fc40_s66_5"
+
+[components]
+forc = "0.66.5"
+fuel-core = "0.40.0"
