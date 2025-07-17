@@ -4,8 +4,8 @@
 
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
-  <img alt="title image light / dark." src="https://github.com/Layer3Labs/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Zap-Systems/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
+  <img alt="title image light / dark." src="https://github.com/Zap-Systems/zap-contracts/blob/main/assets/imgs/3a_Zap_Logo.png" width="708" height="365">
 </picture>
 </p>
 
