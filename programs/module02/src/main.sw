@@ -11,21 +11,6 @@ use io_utils::{
 };
 use zapwallet_consts::wallet_consts::*;
 
-/*
-configurable {
-    /// The address of the ZapWallet master owner.
-    OWNER_ADDRESS: b256 = b256::zero(),
-    /// The nonce native assetid ascoiated with the owners ZapWallet.
-    NONCE_ASSETID: b256 = b256::zero(),
-    /// This modules assetid as a b256.
-    MODULE_KEY02_ASSETID: b256 = b256::zero(),
-    /// Compile version identifier into bytecode.
-    #[allow(dead_code)]
-    VERSION: b256 = b256::zero(),
-    /// Master Blob ID as a b256.
-    MASTER_BLOB_ID: b256 = b256::zero(),
-}
-*/
 
 configurable {
     /// The address of the ZapWallet master owner.
