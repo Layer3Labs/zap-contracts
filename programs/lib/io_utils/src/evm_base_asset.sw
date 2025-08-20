@@ -4,7 +4,7 @@ use std::bytes::Bytes;
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 use zap_utils::{
     wei_to_eth::wei_to_eth,
-    blob_utils::WalletContext,
+    blob_utils::{WalletContext, MasterConfigs},
 };
 use ::io::InpOut;
 use ::evmtx_io_utils::{
@@ -176,7 +176,8 @@ pub struct OutputProcessingResult {
 /// * `ip_result` - The `InputProcessingResult` obtained from processing the input assets.
 /// * `nonce_assetid` - The asset ID of the nonce asset.
 /// * `nonce_target_val` - The target value for the nonce output.
-/// * `receiver_zapwallet_ctx` - The ZapWallet context for the receiver
+/// * `receiver_zapwallet_ctx` - The ZapWallet context for the receiver.
+/// * `precomputed_modules` - Optional pre-calculated module configurations for fast path verification.
 ///
 /// # Returns
 ///
@@ -197,6 +198,7 @@ pub fn process_output_assets(
     nonce_assetid: b256,
     nonce_target_val: u64,
     receiver_zapwallet_ctx: WalletContext,
+    precomputed_modules: Option<MasterConfigs>,
 ) -> Result<OutputProcessingResult, u64> {
 
     // Ensure sure there is an output for the receiver that is enough to cover the amount
@@ -223,6 +225,7 @@ pub fn process_output_assets(
                         // receiver mapped to the receiving evm address in the signed rlp bytes.
                         receiver_output_found = verify_receiver(
                             receiver_zapwallet_ctx,
+                            precomputed_modules,
                             output.owner.unwrap().into(),
                         );
                     }

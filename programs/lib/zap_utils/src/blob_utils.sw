@@ -437,12 +437,63 @@ pub fn calculate_complete_wallet_details(
     })
 }
 
+/// Fast path calculation of wallet details using pre-calculated module configurations
+pub fn calculate_wallet_details_fast_path(
+    ctx: WalletContext,
+    master_config: MasterConfigs,
+) -> Result<WalletDetails, BuilderError> {
+
+    // Use pre-calculated module asset IDs and addresses
+    let module_asset_ids = master_config.module_assetid;
+    let module_addrs = master_config.module_address;
+
+    // Build master configurables directly (same logic as calculate_master_details)
+    let mut configurables_bytes = Bytes::new();
+
+    // Add all module asset IDs
+    let mut i = 0;
+    while i < 9 {
+        configurables_bytes.append(module_asset_ids[i].to_be_bytes());
+        i += 1;
+    }
+
+    // Add all module addresses
+    let mut i = 0;
+    while i < 9 {
+        configurables_bytes.append(module_addrs[i].to_be_bytes());
+        i += 1;
+    }
+
+    // Add owner pubkey and version
+    configurables_bytes.append(ctx.evm_addr.to_be_bytes());
+    configurables_bytes.append(MASTER_VERSION.to_be_bytes());
+
+    let predicate_info = BlobPredicate {
+        blob_id: ctx.loader_cfgs[9].blob_id,  // Master loader config is at index 9
+        section_len: ctx.loader_cfgs[9].section_len,
+        configurables: configurables_bytes,
+    };
+
+    let master_addr = calculate_blob_predicate_address(predicate_info);
+
+    Result::Ok(WalletDetails {
+        module_asset_ids,
+        module_addrs,
+        master_addr,
+    })
+}
 
 // Struct to hold blob loader configs
 pub struct BlobPredicate {
     pub blob_id: b256,
     pub section_len: u64,
     pub configurables: Bytes,
+}
+
+// Fast mode master module configs
+pub struct MasterConfigs {
+    pub module_assetid: [b256; 9],
+    pub module_address: [b256; 9],
 }
 
 // Calculate blob predicate address

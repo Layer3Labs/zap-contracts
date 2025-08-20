@@ -149,6 +149,7 @@ pub enum AssetType {
 /// * `signature`: [B512] - The owner's compact signature for transaction validation
 /// * `transfer_asset`: [AssetType] - The type of asset being transferred (BASE_ASSET or other native asset)
 /// * `sponsor_type`: [SponsorType] - The sponsorship status of the transaction and sponsor address if applicable
+/// * `precomputed_modules` - Optional pre-calculated module asset IDs and addresses for the receiver's
 ///
 /// # Returns
 ///
@@ -170,6 +171,7 @@ fn main(
     signature: B512,
     transfer_asset: AssetType,
     sponsor_type: SponsorType,
+    precomputed_modules: Option<MasterConfigs>,
 ) -> bool {
 
     // Verify that there is no Nonce asset input(s).
@@ -192,10 +194,25 @@ fn main(
 
     // Create receiver context
     let owner_zapwallet_ctx = WalletContext::new(OWNER_ADDRESS, V1_MANAGER_CID, loader_cfgs);
-    let owner_wallet_details = match calculate_complete_wallet_details(owner_zapwallet_ctx) {
-        Result::Ok(details) => details,
-        Result::Err(_) => { return false; }
+
+    // Calculate the owner wallet details
+    let owner_wallet_details = match precomputed_modules {
+        Some(configs) => {
+            // Fast path: use pre-calculated module configurations
+            match calculate_wallet_details_fast_path(owner_zapwallet_ctx, configs) {
+                Result::Ok(details) => details,
+                Result::Err(_) => return false,
+            }
+        },
+        None => {
+            // Slow path: calculate everything from scratch
+            match calculate_complete_wallet_details(owner_zapwallet_ctx) {
+                Result::Ok(details) => details,
+                Result::Err(_) => return false,
+            }
+        }
     };
+
     let owner_zapwallet_addr = owner_wallet_details.master_addr;
 
     // Find module05 owner and transaction utxoid

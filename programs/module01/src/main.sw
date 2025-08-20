@@ -45,6 +45,8 @@ configurable {
 /// # Arguments
 ///
 /// * `signed_evm_tx` - The signed RLP encoded EVM transaction as a byte array.
+/// * `precomputed_modules` - Optional pre-calculated module asset IDs and addresses for the receiver's
+///   ZapWallet. When provided, skips expensive module calculations for faster verification.
 ///
 /// # Returns
 ///
@@ -84,6 +86,7 @@ configurable {
 ///
 fn main(
     signed_evm_tx: Bytes,
+    precomputed_modules: Option<MasterConfigs>,
 ) -> bool {
 
     // Decode signed_evm_tx rlp into its constituent fields:
@@ -164,6 +167,7 @@ fn main(
         NONCE_ASSETID,
         (exp_nonce_inp_val - 1),
         receiver_zapwallet_ctx,
+        precomputed_modules,
     ) {
         Ok(result) => { result.outputs_ok },
         Err(_error_code) => {

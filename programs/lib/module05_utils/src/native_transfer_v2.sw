@@ -25,7 +25,7 @@ use standards::src16::{
     SRC16Payload,
     SRC16Encode,
 };
-
+use zapwallet_consts::wallet_consts::FUEL_CHAINID;
 
 
 pub struct NativeTransfer {
@@ -122,7 +122,7 @@ pub fn get_domain_separator() -> EIP712Domain {
     EIP712Domain::new(
         String::from_ascii_str("ZapNativeTransfer"),
         String::from_ascii_str("1"),
-        (asm(r1: (0, 0, 0, 9889u64)) { r1: u256 }),
+        (asm(r1: (0, 0, 0, FUEL_CHAINID)) { r1: u256 }),
         verifying_contract.into(),
     )
 }

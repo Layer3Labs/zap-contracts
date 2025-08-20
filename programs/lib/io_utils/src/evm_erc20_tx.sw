@@ -5,7 +5,7 @@ use std::bytes_conversions::{u64::*, b256::*};
 use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
 use zap_utils::{
     wei_to_eth::wei_to_eth,
-    blob_utils::WalletContext,
+    blob_utils::{WalletContext, MasterConfigs},
 };
 use ::io::InpOut;
 use ::evmtx_io_utils::{
@@ -312,13 +312,14 @@ pub fn process_src20_input_assets(
 /// nonce return, and change outputs back to the sender.
 ///
 /// # Arguments
-/// * `tx_output_assets` - Vector of transaction output assets to process
-/// * `tx_change_assets` - Vector of change outputs to validate
-/// * `ip_result` - Input processing result containing validated input information
-/// * `receiver_src20_amount` - Amount of SRC20 tokens to be received
-/// * `nonce_assetid` - Asset ID of the nonce asset
-/// * `nonce_target_val` - Expected nonce value after transaction
-/// * `receiver_zapwallet_ctx` - The ZapWallet context for the receiver
+/// * `tx_output_assets` - Vector of transaction output assets to process.
+/// * `tx_change_assets` - Vector of change outputs to validate.
+/// * `ip_result` - Input processing result containing validated input information.
+/// * `receiver_src20_amount` - Amount of SRC20 tokens to be received.
+/// * `nonce_assetid` - Asset ID of the nonce asset.
+/// * `nonce_target_val` - Expected nonce value after transaction.
+/// * `receiver_zapwallet_ctx` - The ZapWallet context for the receiver.
+/// * `precomputed_modules` - Optional pre-calculated module configurations for fast path verification.
 ///
 /// # Returns
 /// * `Ok(bool)` - True if all output validations pass
@@ -339,6 +340,7 @@ pub fn process_src20_output_assets(
     nonce_assetid: b256,
     nonce_target_val: u64,
     receiver_zapwallet_ctx: WalletContext,
+    precomputed_modules: Option<MasterConfigs>,
 ) -> Result<bool, u64> {
 
     // Ensure sure there is an src20 output for the receiver that is enough to
@@ -353,6 +355,7 @@ pub fn process_src20_output_assets(
                         // verify that the output for the src20 asset is to the receiver.
                         if !verify_receiver(
                             receiver_zapwallet_ctx,
+                            precomputed_modules,
                             output.owner.unwrap().into(),
                         ) {
                             return Err(3070u64);

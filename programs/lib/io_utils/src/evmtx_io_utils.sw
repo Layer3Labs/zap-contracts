@@ -216,36 +216,50 @@ pub fn verify_change_output(
     false
 }
 
-/// Verifies that a receiving address matches the master address of a V1 ZapWallet,
-/// by calculating the master address from the receiver's V1 wallet context.
+/// Verifies that a receiving address matches the master address of a V1 ZapWallet.
+///
+/// # Additional Information
+///
+/// This function calculates the master address from the receiver's V1 wallet context
+/// and compares it against the provided receiving address. When pre-calculated module
+/// configurations are provided via `precomputed_modules`, the function uses a fast path that
+/// skips expensive module calculations.
 ///
 /// # Arguments
 ///
-/// * `receiver_ctx` - The receiver's V1 ZapWallet context
-/// * `receiving_addr` - The receiving address (as b256) from the Fuel transaction
+/// * `ctx`: [WalletContext] - The receiver's V1 ZapWallet context containing owner info and loader configurations.
+/// * `precomputed_modules`: [Option<MasterConfigs>] - Optional pre-calculated module configurations for fast path verification.
+/// * `receiving_addr`: [b256] - The receiving address from the introspected Fuel transaction.
 ///
 /// # Returns
 ///
-/// * `bool` - Returns `true` if the receiving address matches the calculated master address
-///           of the ZapWallet, `false` otherwise
+/// * [bool] - Returns `true` if the receiving address matches the calculated master address, `false` otherwise.
 ///
 pub fn verify_receiver(
     ctx: WalletContext,
+    precomputed_modules: Option<MasterConfigs>,
     receiving_addr: b256,   // from the introspected fuel tx
 ) -> bool {
 
-    let wallet_details = match calculate_complete_wallet_details(ctx) {
-        Result::Ok(details) => details,
-        Result::Err(_) => { return false; }
+    let wallet_details = match precomputed_modules {
+        Some(configs) => {
+            // Fast path: use pre-calculated module configurations
+            match calculate_wallet_details_fast_path(ctx, configs) {
+                Result::Ok(details) => details,
+                Result::Err(_) => return false,
+            }
+        },
+        None => {
+            // Slow path: calculate everything from scratch
+            match calculate_complete_wallet_details(ctx) {
+                Result::Ok(details) => details,
+                Result::Err(_) => return false,
+            }
+        }
     };
-    // Verify the calcualted V1 Master Blob Predicate addr
-    // against the tx address
-    if receiving_addr == wallet_details.master_addr {
-        return true;
-    }
-    return false;
 
-    //NOTE - DEBUG:
-    // return true;
+    // Verify the calculated V1 Master Blob Predicate addr
+    // against the tx address
+    receiving_addr == wallet_details.master_addr
 }
 

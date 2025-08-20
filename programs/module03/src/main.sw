@@ -67,6 +67,8 @@ configurable {
 /// # Arguments
 ///
 /// * `signed_evm_tx` - The signed RLP encoded EVM ERC20 transfer transaction as a byte array.
+/// * `precomputed_modules` - Optional pre-calculated module asset IDs and addresses for the receiver's
+///   ZapWallet. When provided, skips expensive module calculations for faster verification.
 ///
 /// # Returns
 ///
@@ -105,7 +107,8 @@ configurable {
 /// - This program can only be used to transfer any native asset other than the BASE_ASSET on Fuel.
 ///
 fn main(
-    signed_evm_tx: Bytes
+    signed_evm_tx: Bytes,
+    precomputed_modules: Option<MasterConfigs>,
 ) -> bool {
 
     // Decode signed evm erc20 transfer tx rlp into its constituent fields:
@@ -190,6 +193,7 @@ fn main(
         NONCE_ASSETID,
         (exp_nonce_inp_val - 1),
         receiver_zapwallet_ctx,
+        precomputed_modules,
     ) {
         Ok(result) => { result },
         Err(_error_code) => {
