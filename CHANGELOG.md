@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+## [0.13.0-dev] - 2025-09-15
+
+### Added
+
+### Changed
+- Version bump for predicates to: `0x646576656C6F706D656E74000000000000000000000000000076302E31332E30` (v0.13.0-development).
+- Changed Module00 to a prototype for intent placeholder.
+- Changed Module04 to a placeholder, with same support for transaction ID witness now in Master (see below).
+- Adjusted Master to accept updated `WalletOp` parameter:
+    /// sha256("ZapWalletInitialize") --> Wallet Initialization
+    /// sha256("ZapWalletUpgrade") --> Wallet Upgrade
+    /// sha256("ZapWalletContractCall") --> Contract Call
+    /// sha256("ZapWalletEIP191PersonalSignTXID") --> Transaction ID Witness via EIP-191
+- Adjusted V1 Manager Contract to support new upgrade protocol
+
+### Fixed
+
 ## [0.1.11-dev] - 2025-08-20
 
 ### Added
@@ -27,6 +44,7 @@
 ### Fixed
 - Security improvements based on audit recommendations.
 
-[Unreleased]: https://github.com/Zap-Systems/zap-contracts/compare/v0.1.11-dev...HEAD
+[Unreleased]: https://github.com/Zap-Systems/zap-contracts/compare/v0.13.0-dev...HEAD
+[0.13.0-dev]: https://github.com/Zap-Systems/zap-contracts/compare/v0.8.0...v0.13.0-dev
 [0.1.11-dev]: https://github.com/Zap-Systems/zap-contracts/compare/v0.8.0...v0.1.11-dev
 [0.1.8-dev]: https://github.com/Zap-Systems/zap-contracts/compare/v0.8.0...v0.1.8-dev
