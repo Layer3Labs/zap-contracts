@@ -11,4 +11,7 @@ zapwallet_consts = { path = "../zapwallet_consts" }
 zap_utils = { path = "../lib/zap_utils" }
 io_utils = { path = "../lib/io_utils" }
 
+walletop_upgrade = { path = "../lib/walletop_utils/walletop_upgrade" }
+
+v1_manager_abi = { path = "../v1_manager_abi" }
 

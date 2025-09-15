@@ -48,7 +48,7 @@ pub fn mint_module_asset(
 ){
 
     let sub_id: b256 = get_sub_id(evm_addr, key);
-    log(sub_id);
+    // log(sub_id);
 
     // calculated module assetid and checks that the current contract
     // has a zero balance of the asset.
@@ -89,14 +89,10 @@ pub fn get_module_assetid(
 }
 
 
-pub fn get_key1(
-    evm_addr: EvmAddress,
-    master_addr: Address,
-) -> b256 {
+pub fn calc_assetid(evm_addr: b256, key: b256) -> b256 {
+    let sub_id: b256 = get_sub_id(evm_addr.into(), key);
+    let mut assetid = b256::zero();
+    asm(n_id: assetid, ptr: (ContractId::this(), sub_id), bytes: 64) { s256 n_id ptr bytes; };
 
-    let mut result_buffer = b256::zero();
-    asm(n_id: result_buffer, ptr: (evm_addr, master_addr), bytes: 64) { s256 n_id ptr bytes; };
-
-    return(result_buffer);
+    assetid
 }
-

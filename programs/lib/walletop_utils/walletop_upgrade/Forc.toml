@@ -2,6 +2,7 @@
 authors = ["@l3labs.org"]
 entry = "lib.sw"
 license = "Apache-2.0"
-name = "helpers"
+name = "walletop_upgrade"
 
 [dependencies]
+zap_utils = { path = "../../zap_utils" }

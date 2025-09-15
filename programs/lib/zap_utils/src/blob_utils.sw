@@ -41,7 +41,7 @@ impl ModuleType {
             1 => ModuleType::Module01(M01_VERSION),
             2 => ModuleType::Module02(M01_VERSION),
             3 => ModuleType::Module03(M01_VERSION),
-            4 => ModuleType::Module04(M04_VERSION),
+            4 => ModuleType::Module04(M04_IDENT),
             5 => ModuleType::Module05(M05_VERSION),
             6 => ModuleType::Module06(M06_IDENT),
             7 => ModuleType::Module07(M07_VERSION),
@@ -184,12 +184,7 @@ fn build_module_configurables_direct(
             configurables_bytes.append(ctx.manager_cid.to_be_bytes());
             configurables_bytes.append(config.version_or_ident.to_be_bytes());
         },
-        ModuleType::Module04 => {
-            configurables_bytes.append(ctx.nonce_asset_id.to_be_bytes());
-            configurables_bytes.append(ctx.evm_addr.to_be_bytes());
-            configurables_bytes.append(config.version_or_ident.to_be_bytes());
-        },
-        ModuleType::Module06 | ModuleType::Module08 => {
+        ModuleType::Module04 | ModuleType::Module06 | ModuleType::Module08 => {
             configurables_bytes.append(config.version_or_ident.to_be_bytes());
             configurables_bytes.append(ctx.evm_addr.to_be_bytes());
         },
@@ -281,8 +276,9 @@ impl ZapWallet for ZapWalletBuilderV1 {
             configurables_bytes.append(module_addrs[i].to_be_bytes());
             i += 1;
         }
-        // Add owner pubkey and version
+        // Add owner pubkey, manager cid and version
         configurables_bytes.append(ctx.evm_addr.to_be_bytes());
+        configurables_bytes.append(ctx.manager_cid.to_be_bytes());
         configurables_bytes.append(MASTER_VERSION.to_be_bytes());
 
         let predicate_info = BlobPredicate {
@@ -351,7 +347,7 @@ impl ZapWallet for ZapWalletBuilderV1 {
         // Module 04
         module_asset_ids[4] = calc_assetid(ctx.evm_addr, KEY04, ctx.manager_cid);
         module_addrs[4] = match calculate_module_details(
-            ModuleType::Module04(M04_VERSION),
+            ModuleType::Module04(M04_IDENT),
             ctx,
             module_asset_ids[4],
             ctx.loader_cfgs[4]
@@ -425,7 +421,11 @@ pub fn calculate_complete_wallet_details(
     };
 
     // Calculate master address
-    let master_addr = match ZapWalletBuilderV1::calculate_master_details(ctx, module_asset_ids, module_addrs) {
+    let master_addr = match ZapWalletBuilderV1::calculate_master_details(
+        ctx,
+        module_asset_ids,
+        module_addrs,
+    ) {
         Result::Ok(addr) => addr,
         Result::Err(e) => return Result::Err(e),
     };
@@ -464,8 +464,9 @@ pub fn calculate_wallet_details_fast_path(
         i += 1;
     }
 
-    // Add owner pubkey and version
+    // Add owner pubkey, manager cid and version
     configurables_bytes.append(ctx.evm_addr.to_be_bytes());
+    configurables_bytes.append(ctx.manager_cid.to_be_bytes());
     configurables_bytes.append(MASTER_VERSION.to_be_bytes());
 
     let predicate_info = BlobPredicate {

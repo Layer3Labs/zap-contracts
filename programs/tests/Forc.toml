@@ -14,3 +14,5 @@ module05_utils = { path = "../lib/module05_utils" }
 module07_utils = { path = "../lib/module07_utils" }
 zapwallet_consts = { path = "../zapwallet_consts" }
 standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.6.3" }
+walletop_contract_call = { path = "../lib/walletop_utils/walletop_contract_call" }
+

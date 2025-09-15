@@ -71,14 +71,17 @@ abi ZapManager {
     #[storage(read)]
     fn zapwallet_versions() -> (str[5], str[5]);
 
+    #[storage(read, write)]
+    fn set_v2_manager_details(v2_manager: ContractId, setup_selector: Bytes);
+
+    #[storage(read, write)]
+    fn set_v2_master_address(owner_address: EvmAddress, v2_master_address: b256);
+
     /// Upgrades a wallet to a new version.
     #[storage(read), payable]
-    fn upgrade(
-        owner_evm_addr: EvmAddress,
-        sponsored: bool,
-    );
+    fn upgrade() -> bool;
 
     /// Checks if the given EVM address has upgraded their wallet.
-    fn has_upgraded(evm_addr: EvmAddress) -> bool;
+    fn has_v1_wallet_upgraded(evm_addr: EvmAddress) -> bool;
 
 }

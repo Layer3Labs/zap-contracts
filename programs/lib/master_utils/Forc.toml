@@ -1,5 +1,5 @@
 [project]
-authors = ["Antony <antony@l3labs.org>"]
+authors = ["@l3labs.org"]
 entry = "lib.sw"
 license = "Apache-2.0"
 name = "master_utils"
@@ -8,3 +8,6 @@ name = "master_utils"
 standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.6.3" }
 zapwallet_consts = { path = "../../zapwallet_consts" }
 zap_utils = { path = "../zap_utils" }
+io_utils = { path = "../io_utils" }
+walletop_upgrade = { path = "../walletop_utils/walletop_upgrade" }
+walletop_contract_call = { path = "../walletop_utils/walletop_contract_call" }

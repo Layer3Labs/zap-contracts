@@ -75,7 +75,6 @@ impl WalletVersionsEvent {
 pub struct UpgradeEvent {
     owner_evm_addr: EvmAddress,
     master_address: Address,
-    is_sponsored: bool,
     verified_nonce: AssetId,
 }
 
@@ -83,13 +82,11 @@ impl UpgradeEvent {
     pub fn new(
         owner_evm_addr: EvmAddress,
         master_address: Address,
-        is_sponsored: bool,
         verified_nonce: AssetId,
     ) -> Self {
         Self {
             owner_evm_addr,
             master_address,
-            is_sponsored,
             verified_nonce,
         }
     }

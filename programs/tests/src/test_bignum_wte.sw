@@ -99,3 +99,26 @@ fn test_204_wei_to_eth() {
 
     // 1844674407370955161500000000000
 }
+
+// forc test test_205_wei_to_eth --logs
+#[test]
+fn test_205_wei_to_eth() {
+
+    // 380000000900000000 wei
+    // 0.380000000900000000 ETH
+    //
+    //
+    // 54607FCCC4AE900
+    let v5 = asm(r1: (0, 0, 0x0, 0x54607FCCC4AE900)) { r1: u256 };
+
+    // should cut off the last 900000000
+
+    log(String::from_ascii_str("------------------ "));
+
+    let result = wei_to_eth(v5);
+    let expected = asm(r1: (0, 0, 0, 0x16A65700)) { r1: u256 };
+
+    log(u256_to_hex(result.unwrap().0));
+    log(u256_to_hex(expected));
+
+}

@@ -1,7 +1,6 @@
 contract;
 
 mod tools;
-pub mod manager;
 mod events;
 
 use std::{
@@ -10,12 +9,17 @@ use std::{
     string::String,
     option::Option::{self, *},
     hash::*,
-    storage::storage_vec::*,
+        storage::{
+        storage_map::*,
+        storage_bytes::*,
+        storage_vec::*,
+    },
     vm::evm::evm_address::EvmAddress,
     context::{this_balance, balance_of},
     asset::*,
     contract_id::*,
     asset::mint_to,
+    low_level_call::{call_with_function_selector, CallParams},
 };
 use std::primitive_conversions::{u16::*, u32::*, u64::*};
 use std::bytes_conversions::{b256::*, u64::*};
@@ -35,9 +39,8 @@ use tools::{
     mint_module_asset,
     get_sub_id,
     get_module_assetid,
-    get_key1,
 };
-use ::manager::ZapManager;
+
 use ::events::{
     ContractStateEvent,
     InitializeWalletEvent,
@@ -46,6 +49,9 @@ use ::events::{
     OwnershipTransferEvent,
     V1BlobIdsUpdatedEvent,
 };
+use walletop_upgrade::io_verify::*;
+use v1_manager_abi::ZapManager;
+
 
 
 configurable {
@@ -56,9 +62,6 @@ configurable {
 storage {
     /// The owner of the contract.
     owner: State = State::Uninitialized,
-    /// Maps a unique wallet identifier to its nonce asset.
-    /// Key is sha256(evm_addr || master_addr) -> nonce AssetId.
-    v1_map: StorageMap<b256, AssetId> = StorageMap {},
     /// Controls whether new wallet initialization is allowed.
     can_initialize: bool = false,
     /// Controls whether wallet upgrades are allowed.
@@ -71,6 +74,23 @@ storage {
     /// Keys 0-8: module blob IDs (modules 00-08)
     /// Key 9: master blob ID
     v1_blob_ids: StorageMap<u64, b256> = StorageMap {},
+
+    //--- for v2 upgrade --
+    v2_manager_id: ContractId = ContractId::zero(),
+    setup_via_upgrade_selector: StorageVec<StorageBytes> = StorageVec {},
+
+    /// Maps a unique wallet identifier to its nonce asset.
+    /// Key is sha256(evm_addr || nonce_key) -> nonce SubId.
+    v1_master_to_nonce_map: StorageMap<b256, AssetId> = StorageMap {},
+    /// Maps a unique nonce asset to its unique wallet identifier.
+    v1_nonce_to_owner_master_map: StorageMap<AssetId, (EvmAddress, b256)> = StorageMap {},
+
+    /// Maps a unique owner address to its v2 master address.
+    owner_to_v2_master_map: StorageMap<EvmAddress, b256> = StorageMap {},
+
+    // Tracks V1 Master address upgrades
+    // upgraded_v1_masters: StorageMap<b256, bool> = StorageMap {},
+
 }
 
 
@@ -381,21 +401,24 @@ impl ZapManager for Contract {
             }
         };
         let master_addr = Address::from(wallet_details.master_addr);
-        let nonce_assetid = AssetId::from(ctx.nonce_asset_id);
 
-        // Generate unique key for this wallet (sha256(evm_addr || master_addr))
-        let key = get_key1(owner_evm_addr, master_addr);
+        log(master_addr);
+
+        let nonce_assetid = AssetId::from(ctx.nonce_asset_id);
 
         // Check for existing nonce asset to prevent double initialization
         require(
-            !check_initialized(key),
+            !check_initialized(nonce_assetid),
             "Wallet already has Nonce, if error mint assets individually"
         );
 
-        // Obtain nonce assetid, mint nonce assets and store key/nonce asset_id mapping data
+        // Obtain nonce assetid, mint nonce assets and store mapping data
         let nonce_subid = get_nonce_subid(owner_evm_addr);
         let nonce_tfr_amt = mint_nonce_asset(nonce_subid, nonce_assetid);
-        storage.v1_map.insert(key, nonce_assetid);
+
+        // Store mappings of Master --> Nonce, and, EVM addr --> Master
+        storage.v1_master_to_nonce_map.insert(wallet_details.master_addr, nonce_assetid);
+        storage.v1_nonce_to_owner_master_map.insert(nonce_assetid, (owner_evm_addr, wallet_details.master_addr));
 
         // Mint and transfer all base module assets to their addresses
         let module_keys: [b256; 9] = [KEY00, KEY01, KEY02, KEY03, KEY04, KEY05, KEY06, KEY07, KEY08];
@@ -515,41 +538,75 @@ impl ZapManager for Contract {
         owner_evm_addr
     }
 
-
-
-    /// Checks if a ZapWallet has the nonce asset for a given EVM address and master address
-    /// combination by verifying the existence and balance of its nonce asset at this contract.
+    /// Checks if a ZapWallet has been initialized by looking up either the EVM address
+    /// or master address in the storage maps.
     ///
     /// # Arguments
     ///
-    /// * `master_address`: The predicate/master address that was used during initialization
-    /// * `evm_addr`: The EVM address associated with the ZapWallet
+    /// * `master_address`: Optional master/predicate address (pass Address::zero() if not provided)
+    /// * `evm_addr`: Optional EVM address (pass EvmAddress::zero() if not provided)
     ///
     /// # Returns
     ///
     /// * `bool`:
-    ///   * `true` if a nonce asset exists in storage for this address combination and has non-zero balance
-    ///   * `false` if either the nonce asset doesn't exist or has zero balance
+    ///   * `true` if a nonce asset exists for either address and has non-zero balance
+    ///   * `false` if neither address is found or the nonce asset has zero balance
     ///
     /// # Details
     ///
-    /// Function generates a key (sha256(evm_addr || master_address)) and uses it to look up
-    /// the nonce asset ID in storage. This ensures wallets are uniquely identified by both their
-    /// EVM address and master address.
+    /// Function checks both storage maps:
+    /// - v1_master_to_nonce_map: master_address -> nonce_asset_id
+    /// - v1_nonce_to_owner_master_map: nonce_asset_id -> (evm_address, master_address)
     ///
-    /// # Number of Storage Accesses
-    ///
-    /// * Reads: 1 (storage lookup via check_initialized)
+    /// User should provide EITHER master_address OR evm_addr, not both.
+    /// If both are provided, only master_address is checked.
     ///
     #[storage(read)]
     fn initialized(
         master_address: Address,
         evm_addr: EvmAddress,
     ) -> bool {
+        // Check if we have a valid master address (not zero)
+        let has_master = master_address != Address::zero();
 
-        let key = get_key1(evm_addr, master_address);
+        // Check if we have a valid EVM address (not zero)
+        let has_evm = evm_addr != EvmAddress::zero();
 
-        return check_initialized(key)
+        // Require exactly one address to be provided
+        require(has_master || has_evm, "Must provide either master address or EVM address");
+        require(!(has_master && has_evm), "Cannot provide both master and EVM address");
+
+        let nonce_asset_id: AssetId = if has_master {
+            // Look up by master address
+            let master_b256: b256 = master_address.bits();
+            match storage.v1_master_to_nonce_map.get(master_b256).try_read() {
+                Some(asset_id) => asset_id,
+                None => return false,
+            }
+        } else {
+            // Look up by EVM address
+
+            // Calculate the nonce subid for this EVM address
+            let nonce_subid = get_nonce_subid(evm_addr);
+            let potential_nonce_assetid = AssetId::new(ContractId::this(), nonce_subid);
+
+            // Check if this nonce asset exists in our reverse map
+            match storage.v1_nonce_to_owner_master_map.get(potential_nonce_assetid).try_read() {
+                Some((stored_evm, _master)) => {
+                    // Verify the EVM address matches
+                    if stored_evm == evm_addr {
+                        potential_nonce_assetid
+                    } else {
+                        return false;
+                    }
+                },
+                None => return false,
+            }
+        };
+
+        // Check if the nonce asset has a non-zero balance
+        let balance = this_balance(nonce_asset_id);
+        balance > 0
     }
 
     /// Sets the version strings for V1 and V2 ZapWallet implementations.
@@ -612,66 +669,255 @@ impl ZapManager for Contract {
         (v1_version, v2_version)
     }
 
-    /// Processes a wallet upgrade from V1 to V2. Verifies the ownership and existence
-    /// of the wallet through its nonce asset.
+    /// Sets the V2 manager contract details for upgrade functionality.
     ///
     /// # Arguments
     ///
-    /// * `owner_evm_addr`: The EVM address of the wallet owner
-    /// * `sponsored`: Whether this upgrade is sponsored (fees paid by another party)
+    /// * `v2_manager`: [ContractId] - The contract ID of the V2 manager contract.
+    /// * `setup_selector`: [Bytes] - The function selector bytes for the setup_via_upgrade function.
     ///
     /// # Reverts
     ///
-    /// * When contract is paused
-    /// * When upgrades are not enabled
-    /// * When nonce asset is not found
-    /// * When nonce asset doesn't match stored mapping
+    /// * When called by non-owner.
     ///
     /// # Number of Storage Accesses
     ///
-    /// * Reads: 3 (pause status, upgrade status, nonce mapping)
+    /// * Writes: 2
+    ///   * `v2_manager_id`: 1
+    ///   * `setup_via_upgrade_selector`: 1
     ///
-    /// # Events
+    #[storage(read, write)]
+    fn set_v2_manager_details(v2_manager: ContractId, setup_selector: Bytes) {
+
+        // Only owner can set versions
+        require_owner();
+
+        storage.v2_manager_id.write(v2_manager);
+
+        // Initialize the StorageVec if it's empty, get the storage key and write the bytes
+        if storage.setup_via_upgrade_selector.len() == 0 {
+            storage.setup_via_upgrade_selector.push(StorageBytes {});
+        }
+        let storage_key: StorageKey<StorageBytes> = storage.setup_via_upgrade_selector.get(0).unwrap();
+        storage_key.write_slice(setup_selector);
+
+        //TODO - Make this an event
+        log("V2 manager info");
+        log("Selector bytes stored with length:");
+        log(storage_key.len());
+    }
+
+    /// Records the V2 master address mapping for an upgraded wallet.
     ///
-    /// * `UpgradeEvent`: Emitted with upgrade details including owner and asset verification
+    /// # Arguments
+    ///
+    /// * `owner_address`: [EvmAddress] - The EVM address of the wallet owner.
+    /// * `v2_master_address`: [b256] - The new V2 master predicate address.
+    ///
+    /// # Reverts
+    ///
+    /// * When caller is not the V2 manager contract.
+    /// * When called by non-contract identity.
+    ///
+    /// # Storage Access
+    ///
+    /// * Reads: 1
+    ///   * `v2_manager_id`: 1
+    /// * Writes: 1
+    ///   * `owner_to_v2_master_map`: 1
+    ///
+    #[storage(read, write)]
+    fn set_v2_master_address(owner_address: EvmAddress, v2_master_address: b256) {
+
+        // Verify caller is v2_manager
+        let caller = msg_sender().unwrap();
+        match caller {
+            Identity::ContractId(id) => {
+                // Enforce v2_manager check
+                require(
+                    id == storage.v2_manager_id.read(),
+                    "Only v2_manager can call set_v2_master_address()"
+                );
+                log("Called by contract:");
+                log(id);
+
+                storage.owner_to_v2_master_map.insert(owner_address, v2_master_address);
+            },
+            _ => {
+                require(false, "Must be called by v2_manager contract");
+            }
+        }
+    }
+
+    /// Upgrades a v1 ZapWallet to v2 by accepting v1 nonce tokens and minting equivalent v2 tokens and
+    /// module assets.
+    ///
+    /// ### Additional Information
+    ///
+    /// This function serves as the migration path from v1 to v2 wallet system. It validates ownership
+    /// through v1 nonce tokens in transaction inputs, ensures single-owner transactions, and triggers
+    /// v2 token minting via a call to the v2_manager contract.
+    ///
+    /// The upgrade process is irreversible and can only be performed once per wallet. The v1 nonce
+    /// tokens serve as proof of ownership and determine the amount of v2 tokens to mint.
+    ///
+    /// ### Arguments
+    ///
+    /// * None - Function uses msg_sender() and transaction introspection
+    ///
+    /// ### Reverts
+    ///
+    /// * When `msg_sender()` is a contract instead of predicate/EOA address
+    /// * When v1 nonce tokens are not found in transaction inputs
+    /// * When v1 nonce tokens found are invalid or corrupted
+    /// * When transaction inputs have mixed ownership (security check)
+    /// * When nonce owner doesn't match other input owners
+    /// * When the wallet has already been upgraded (prevents double-upgrade)
+    /// * When the call to v2_manager fails
+    ///
+    /// ### Number of Storage Accesses
+    ///
+    /// * Reads: 4
+    ///   * `can_upgrade`: 1
+    ///   * `v1_master_to_nonce_map`: 1
+    ///   * `v1_nonce_to_owner_master_map`: 1
+    ///   * `v2_manager_id`: 1
+    ///   * `setup_via_upgrade_selector`: 1
+    ///
+    /// * Writes: Implementation-dependent (upgrade status tracking)
     ///
     #[storage(read), payable]
-    fn upgrade(
-        owner_evm_addr: EvmAddress,
-        sponsored: bool,
-    ) {
-        // Status checks
-        require(!_is_paused(), "Contract is paused");
-        require(storage.can_upgrade.read(), "Upgrades are not enabled");
+    fn upgrade() -> bool {
 
-        // Get nonce asset ID for this wallet
-        let nonce_assetid: b256 = get_module_assetid(owner_evm_addr, KEY_NONCE).into();
+        // Check if upgrades are enabled
+        require(
+            storage.can_upgrade.read() == true,
+            "Upgrades are currently disabled"
+        );
 
-        // Find the nonce owner (master address) from inputs
-        let (_, nonce_owner) = match find_utxoid_and_owner_by_asset(nonce_assetid) {
-            Some((_, owner)) => (b256::zero(), owner),
-            None => {
-                // Nonce asset not found in inputs
-                revert(1001u64)
+        // Get msg_sender - should be v1 master predicate
+        let sender = msg_sender().unwrap();
+        let sender_address = match sender {
+            Identity::Address(addr) => {
+                // Upgrade called by address
+                addr
             },
+            Identity::ContractId(_) => {
+                require(false, "Upgrade must be called by Master address");
+                Address::zero() // This won't be reached
+            }
+        };
+        let storage_nonce_assetid = storage.v1_master_to_nonce_map.get(sender_address.into()).read();
+
+        // Extract and validate nonce from transaction inputs
+        let (nonce_amount, nonce_owner) = match extract_nonce_from_inputs(storage_nonce_assetid.into()) {
+            NonceExtractionResult::Success((amount, owner)) => {
+                // log("✓ Found v1 nonce tokens in inputs");
+                // log("  Amount:");
+                // log(amount);
+                // log("  Owner:");
+                // log(owner);
+                (amount, owner)
+            },
+            NonceExtractionResult::NotFound => {
+                // V1 nonce tokens not found in transaction inputs
+                require(false, "V1 nonce tokens required for upgrade");
+                (0, Address::zero()) // Won't reach here
+            },
+            NonceExtractionResult::Invalid => {
+                // V1 nonce tokens found but invalid
+                require(false, "Invalid v1 nonce tokens");
+                (0, Address::zero()) // Won't reach here
+            }
         };
 
+        // Verify all non-nonce inputs from same owner
+        let _input_owner = match verify_non_nonce_inputs_same_owner(storage_nonce_assetid.into()) {
+            OwnershipValidationResult::Success(owner) => {
+                // All non-nonce inputs from same owner
+                // log("  Owner:");
+                // log(owner);
 
-        // Verify nonce asset matches stored mapping
-        let key = get_key1(owner_evm_addr, nonce_owner);
-        let storage_nonce_assetid = storage.v1_map.get(key).read();
-        require(
-            AssetId::from(nonce_assetid) == storage_nonce_assetid,
-            "Nonce asset mismatch with stored mapping"
+                // Additional check: nonce owner should match other inputs
+                require(
+                    owner == nonce_owner,
+                    "Nonce owner doesn't match other input owners"
+                );
+                owner
+            },
+            OwnershipValidationResult::MixedOwners => {
+                // Mixed ownership detected in inputs
+                require(false, "All inputs must be from same owner");
+                Address::zero() // Won't reach here
+            },
+            OwnershipValidationResult::NoInputs => {
+                // No non-nonce inputs found (only nonce being upgraded
+                nonce_owner // Use nonce owner as the input owner
+            }
+        };
+
+        let owner_details = storage.v1_nonce_to_owner_master_map.get(storage_nonce_assetid).read();
+
+        /*
+        let has_upgraded_before = has_upgraded(owner_details.0);
+        log("double upgrade check:");
+        if has_upgraded_before {
+            log("returned true");
+        } else {
+            log("returned false");
+        }
+        */
+
+        // PREPARE CALL TO V2_MANAGER
+
+        // Prepare low-level call to v2_manager
+        let v2_manager = storage.v2_manager_id.read();
+
+        // Read the selector bytes
+        let selector: Bytes = storage.setup_via_upgrade_selector.get(0).unwrap().read_slice().unwrap();
+
+        // Encode the parameters for setup_via_upgrade(amount: u64, owner_addr: b256)
+        let mut calldata = Bytes::new();
+
+        // Parameter 1: Append amount as u64 (8 bytes)
+        let amount_bytes = nonce_amount.to_be_bytes();
+        calldata.append(amount_bytes);
+
+        // Parameter 2: Append owner_addr as b256 (32 bytes)
+        // Convert Address to b256
+        let owner_addr_hash: b256 = owner_details.0.bits();
+        // let owner_hash_b256: b256 = sender_address.into();
+
+        // Convert b256 to bytes array
+        let owner_bytes = Bytes::from(owner_addr_hash);
+        calldata.append(owner_bytes);
+
+        let call_params = CallParams {
+            coins: 0,
+            asset_id: AssetId::base(),
+            gas: 1_000_000,
+        };
+
+        // Make the low-level call with the function selector
+        call_with_function_selector(
+            v2_manager,
+            selector,
+            calldata,
+            call_params,
         );
 
         // Emit upgrade verification and status
         UpgradeEvent::new(
-            owner_evm_addr,            // Owner being upgraded
+            owner_details.0,            // Owner being upgraded
             nonce_owner,               // Master address verified
-            sponsored,                 // Upgrade gas payment type
             storage_nonce_assetid,     // Verified nonce asset
         ).log();
+
+        // write true to v1 master has upgraded
+        // storage.upgraded_v1_masters.insert(owner_addr_hash, true);
+
+
+        true
     }
 
     /// Checks if a wallet has successfully upgraded by verifying the balance
@@ -697,52 +943,62 @@ impl ZapManager for Contract {
     ///
     /// * Reads: 1 (balance check)
     ///
-    fn has_upgraded(evm_addr: EvmAddress) -> bool {
-        // Calculate the upgrade module asset ID for this wallet
-        let upgrade_module_assetid: b256 = get_module_assetid(evm_addr, KEY00).into();
+    fn has_v1_wallet_upgraded(evm_addr: EvmAddress) -> bool {
 
-        // Check if geq 1 unit is held by this contract
-        return this_balance(AssetId::from(upgrade_module_assetid)) >= 1;
+        return has_upgraded(evm_addr)
     }
 
 }
 
-/// Checks if a wallet has already been initialized for a given key1 by checking the storage map
-/// and the balance of any associated nonce asset.
+// helper function to call internally
+// #[storage(read)]
+fn has_upgraded(evm_addr: EvmAddress) -> bool {
+    // Calculate the upgrade module asset ID for this wallet
+    let v1_nonce_assetid: b256 = get_module_assetid(evm_addr, KEY_NONCE).into();
+
+    log(this_balance(AssetId::from(v1_nonce_assetid)));
+
+    // Check if geq 1 unit is held by this contract
+    return this_balance(AssetId::from(v1_nonce_assetid)) > 1;
+
+    // Check the upgrade status in storage
+    // let owner_details = storage.v1_nonce_to_owner_master_map.get(AssetId::from(v1_nonce_assetid)).read();
+    // let has_upgraded = storage.upgraded_v1_masters.get(owner_details.0.bits()).read();
+    // has_upgraded
+}
+
+/// Checks if a wallet has already been initialized for a given nonce asset ID by checking
+/// if it exists in storage and has a non-zero balance.
 ///
 /// # Arguments
 ///
-/// * `key1`: Hash of EVM address and master address (sha256(evm_addr || master))
+/// * `nonce_asset_id`: The nonce asset ID to check
 ///
 /// # Returns
 ///
 /// * `bool`:
-///   * `true` if a nonce asset exists in storage and has non-zero balance
+///   * `true` if the nonce asset exists in storage and has non-zero balance
 ///   * `false` if either:
-///     * No nonce asset exists in storage for this key1 (first initialization)
-///     * Or a nonce asset exists but has zero balance
+///     * No record exists in storage for this nonce asset (never initialized)
+///     * Or the nonce asset exists but has zero balance (burned/spent)
 ///
 /// # Number of Storage Accesses
 ///
 /// * Reads: 1 (storage map lookup)
 ///
-/// # Additional Information
-///
-///     key = sha256(evm_addr || master_addr)
-///
 #[storage(read)]
 fn check_initialized(
-    key: b256,
+    nonce_asset_id: AssetId,
 ) -> bool {
-    // Check if the key exists in storage first
-    if let Some(storage_nonce_assetid) = storage.v1_map.get(key).try_read() {
-        // If we found an assetid in storage, check its balance.
-        // for an already minted nonce the balance should be 1
-        return this_balance(storage_nonce_assetid) != 0;
+    // Check if the nonce asset exists in our storage map
+    if let Some((_evm_addr, _master_addr)) = storage.v1_nonce_to_owner_master_map.get(nonce_asset_id).try_read() {
+        // If we found the nonce asset in storage, check its balance
+        // For an already minted nonce the balance should be non-zero
+        return this_balance(nonce_asset_id) != 0;
     }
 
-    // If key wasn't in storage, this is first initialization
-    return false;
+    // If nonce asset wasn't in storage, it was never initialized
+    false
 }
 
 // Helper function to check ownership

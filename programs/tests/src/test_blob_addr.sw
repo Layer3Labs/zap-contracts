@@ -21,15 +21,15 @@ use zapwallet_consts::wallet_consts::*;
 
 // Blob IDs
 const M00_BLOB_ID: b256 = 0x68b8ae305bbb264872c6c0957eee37059c274b0c680a3a4160ef167b1f88f6da;
-const M01_BLOB_ID: b256 = 0xa82bd574e319a28914bb59e195fbdfe9a892cc5aa99c080a085a7e05dbc4f4d7;
-const M02_BLOB_ID: b256 = 0x5dea3358854fb449394d7884f9f9d6fe461cc0184f34af468518eefb782aced8;
-const M03_BLOB_ID: b256 = 0x593e568ee1ecb74d39899ec9ea0ef221207f1f626e176f53fcb47f7973f20883;
-const M04_BLOB_ID: b256 = 0xb66a7d206c4623f24af1932ec9a7a1312d5f26d198506220f170e2a1baa01c90;
-const M05_BLOB_ID: b256 = 0x5cca4dc452afecf08f7db490c50dca01b52004412da40fefcaff69477bd0e205;
+const M01_BLOB_ID: b256 = 0xdf0a691c33115eabf120c36430f2bc257b5df27ce2aac808c9b88204ba7d7bbe;
+const M02_BLOB_ID: b256 = 0xde0a5bac024277daf4e4a69a70ce131491c7c75a0af5fba63ad0aba41b7950a2;
+const M03_BLOB_ID: b256 = 0xa1d85659715c6072e5c56a0bbe75f8c2b444cd4e6c66d2c6e3f036b2854437fe;
+const M04_BLOB_ID: b256 = 0xf8c2b3282ba4711c93d8a801d2e4e3bdb7996a3d6711a38360e7a4a6392150d7;
+const M05_BLOB_ID: b256 = 0x7eca86f983262b0852edc35dc8063b0cac1a0400b7e6f586b143b02cce84b838;
 const M06_BLOB_ID: b256 = 0xf8c2b3282ba4711c93d8a801d2e4e3bdb7996a3d6711a38360e7a4a6392150d7;
-const M07_BLOB_ID: b256 = 0x0fc1f076ffb99827792711c75144a65f8113d102f2024f3782d9b7b0d7c2786f;
+const M07_BLOB_ID: b256 = 0x5575459345dcc69aeb2728cd2a29d962e0b14c85ed5988a2932f6cd8f4120b95;
 const M08_BLOB_ID: b256 = 0xf8c2b3282ba4711c93d8a801d2e4e3bdb7996a3d6711a38360e7a4a6392150d7;
-const MASTER_BLOB_ID: b256 = 0xaf1a84a4b754c8077db3dc319abcde9099d6f9c9e5d55b4ab59af592445463ac;
+const MASTER_BLOB_ID: b256 = 0xbbcdce12ccbae075e289dc46f6cd123445c4a64effa093cc7f651243ee0855d8;
 
 const M00_ASSETID: b256 = 0x2397d6670424a3f28dcacb4b401d7d757a2fa56facf76a5986442b34c7259ff9;
 const M01_ASSETID: b256 = 0x4756e1a0ce6b0b5f3f63918794cf205ea3412c18d764123e8a7061b1cea4989a;
@@ -52,7 +52,7 @@ const M07_ADDRESS: b256 = 0x3979b021d56d5a5c6a8da57e4878c4de2cfba64ff3da7565ff55
 const M08_ADDRESS: b256 = 0x6ee3ce2e4a087e4bac25953928aaf8700530c1132a55873fad33353065780169;
 
 // V1 ZapManager CID
-const V1_MANAGER_CID: b256 = 0x8e046df8e45aeebaf4443498eced8102688e2628c3e4eb58893f061553b04cc7;
+const V1_MANAGER_CID: b256 = 0xa8a06dd9fa0221ed54ef9f62a8bdfe38be89384513dc822c84cc226199df7494;
 
 
 // forc test test_100_zapwallet_ctx_builder_pattern --logs
@@ -135,6 +135,8 @@ fn test_100_zapwallet_ctx_builder_pattern() {
 #[test()]
 fn test_101_full_wallet_details() {
     let owner_pubkey: b256 = 0x000000000000000000000000333339d42a89028ee29a9e9f4822e651bac7ba14;
+    // let owner_pubkey: b256 = 0x000000000000000000000000ff04ff9252178b00700c297243784ace4f30285a;
+    // let owner_pubkey: b256 = 0x000000000000000000000000ff02ffaee94c93a6318f932f3e6b910b6b075c65;
 
     let loader_cfgs = [
         LoaderConfig::new(M00_BLOB_ID, M00_SEC_LEN),
@@ -196,7 +198,7 @@ fn test_101_full_wallet_details() {
 #[test()]
 fn test_102_verify_receiver_ctx() {
 
-    let owner_pubkey: b256 = 0x000000000000000000000000333339d42a89028ee29a9e9f4822e651bac7ba14;
+    let owner_pubkey: b256 = 0x000000000000000000000000ff04ff9252178b00700c297243784ace4f30285a;
     let owner_zapwallet_addr = 0x1de83a24021f5d39ab4f0194f1347f1c8696f9c94ab6c64866c15da7b066024e;
 
     let loader_cfgs = [

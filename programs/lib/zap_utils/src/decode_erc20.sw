@@ -196,7 +196,8 @@ pub fn decode_signed_typedtx_erc20(signed_tx: Bytes) -> DecodeERC20RLPResult {
 
     DecodeERC20RLPResult::Success((
         type_identifier,
-        chain_id, nonce,
+        chain_id,
+        nonce,
         maxFeePerGas,
         gasLimit,
         value,

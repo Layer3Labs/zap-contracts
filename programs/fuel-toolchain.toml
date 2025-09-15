@@ -3,4 +3,4 @@ channel = "fc40_s66_6"
 
 [components]
 forc = "0.66.6"
-fuel-core = "0.40.0"
+fuel-core = "0.46.0"

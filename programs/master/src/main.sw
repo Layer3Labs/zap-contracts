@@ -25,9 +25,16 @@ use zap_utils::{
         verify_output_coin,
     },
 };
-use master_utils::initialize::*;
-use master_utils::module::*;
-use master_utils::module_check::*;
+use master_utils::{
+    types::*,
+    initialize::*,
+    upgrade::*,
+    contract_call::*,
+    witness_txid::*,
+    module::*,
+    module_check::*,
+};
+
 
 
 configurable {
@@ -43,6 +50,8 @@ configurable {
     ASSET_KEY08: b256 = b256::zero(), MODULE08_ADDR: Address = Address::zero(),
     /// The address of the owner (example value for testing).
     OWNER_ADDRESS: b256 = 0xff00ff01ff02ff03ff04ff05ff06ff07ff08ff09ff0aff0bff0cff0dff0eff0f,
+    /// The address of the ZapManager V1 contract.
+    V1_MANAGER_CONTRACT_ID: b256 = b256::zero(),
     /// Compile version identifier into bytecode.
     #[allow(dead_code)]
     VERSION: b256 = b256::zero(),
@@ -96,7 +105,7 @@ fn main( op: Option<WalletOp> ) -> bool {
     // Critial bools for validation success.
     let mut all_checks: bool = false;
     let mut module_checks: bool = false;
-    let mut init_check: bool = false;
+    let mut walletop_check: bool = false;
 
     // Sets up a clean vector for module finding.
     let mut found_modules: Vec<bool> = Vec::with_capacity(NUM_MODULES);
@@ -146,19 +155,36 @@ fn main( op: Option<WalletOp> ) -> bool {
         j += 1;
     }
 
-    // Checks if we should process an initialization fo other module.
-    match module_check_controller(found_modules) {
-        ModuleCheckResult::Init => {
-            // Validate initialization
+    // Checks if we should process a Wallet operation, or Module
+    match module_check_controller(found_modules, op) {
+        ModuleCheckResult::WalletInit => {
+            // Validate wallet initialization.
             if op.is_some() {
-                init_check = verify_init_struct(in_count, out_count, op.unwrap(), OWNER_ADDRESS);
+                walletop_check = verify_init_struct(in_count, out_count, op.unwrap(), OWNER_ADDRESS);
+            }
+        },
+        ModuleCheckResult::WalletUpgrade => {
+            // Validate wallet upgrade.
+            if op.is_some() {
+                walletop_check = verify_wallet_upgrade(op.unwrap(), OWNER_ADDRESS, V1_MANAGER_CONTRACT_ID);
+            }
+        },
+        ModuleCheckResult::WalletContractCall => {
+            // Validate wallet contract call.
+            if op.is_some() {
+                walletop_check = verify_wallet_contract_call(op.unwrap(), OWNER_ADDRESS, V1_MANAGER_CONTRACT_ID);
+            }
+        },
+        ModuleCheckResult::WalletWitnessTxID => {
+            // Validate wallet eip-191 witness transaction id.
+            if op.is_some() {
+                walletop_check = verify_witness_tx_id(op.unwrap(), OWNER_ADDRESS, V1_MANAGER_CONTRACT_ID);
             }
         },
         ModuleCheckResult::Module(pos) => {
-            // Determine which module was found and ensure that
-            // there is a suitable output that returns the module
-            // asset to the module address:
+            // Handle regular module operation (0-8)
             let modulex = match pos {
+                0 => walletmodules.module00,
                 1 => walletmodules.module01,
                 2 => walletmodules.module02,
                 3 => walletmodules.module03,
@@ -172,15 +198,13 @@ fn main( op: Option<WalletOp> ) -> bool {
 
             module_checks = check_output_module(tx_outputs, modulex);
         },
-        ModuleCheckResult::Upgrade => {
-            // The upgrade module was found, we dont need to return its asset
-            module_checks = true;
+        ModuleCheckResult::ShouldRevert => {
+            return false;
         },
-        ModuleCheckResult::ShouldRevert => { return false; },
     }
 
-    // Ensure that exactly one of `module_checks` or `init_check` is true.
-    all_checks = (module_checks || init_check) && !(module_checks && init_check);
+    // Ensure that exactly one of `module_checks` or `walletop_check` is true.
+    all_checks = (module_checks || walletop_check) && !(module_checks && walletop_check);
 
     return all_checks;
 }

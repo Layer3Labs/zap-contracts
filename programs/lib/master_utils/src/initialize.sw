@@ -15,6 +15,7 @@ use std::{
         output_asset_to,
         // Output,
     },
+    tx::tx_witness_data,
 };
 use std::*;
 use std::bytes_conversions::u64::*;
@@ -31,7 +32,7 @@ use standards::{
         SRC16Encode,
     },
 };
-use zapwallet_consts::wallet_consts::FUEL_BASE_ASSET;
+use zapwallet_consts::wallet_consts::{FUEL_BASE_ASSET, FUEL_CHAINID};
 use zap_utils::{
     rlp_helpers::bytes_read_b256,
     transaction_utls::{
@@ -44,17 +45,9 @@ use zap_utils::{
         input_txn_hash,
     },
 };
+use ::types::*;
 
 
-/// A ZapWallet master operation.
-pub struct WalletOp {
-    /// The Ethereum address associated with this operation
-    pub evm_addr: b256,
-    /// The compact signature bytes for the operation
-    pub compsig: Bytes,
-    /// The command string to execute
-    pub command: String,
-}
 
 /// This struct is used for EIP712 typed data signing and verification
 /// during wallet initialization.
@@ -140,7 +133,7 @@ fn _get_domain_separator() -> EIP712Domain {
     EIP712Domain::new(
         String::from_ascii_str("ZapWallet"),
         String::from_ascii_str("1"),
-        (asm(r1: (0, 0, 0, 9889)) { r1: u256 }),
+        (asm(r1: (0, 0, 0, FUEL_CHAINID)) { r1: u256 }),
         verifying_contract.into()
     )
 }
@@ -166,19 +159,17 @@ pub fn verify_init_struct(in_count: u64, out_count: u64, op: WalletOp, owner_add
     let (inpok, utxoid, change_to) = check_inputs(in_count);
     let chgok = check_change(out_count, change_to);
     if inpok && chgok {
-        // compact signature reconstruct from parts
-        let mut ptr: u64 = 0;
-        let (cs_lhs, ptr) = bytes_read_b256(op.compsig, ptr, 32);
-        let (cs_rhs, _ptr) = bytes_read_b256(op.compsig, ptr, 32);
-        let compactsig = B512::from((cs_lhs, cs_rhs));
+        // Obtain witness at index
+        let witness_index = op.override_witness_index.unwrap_or(0);
+        let compact_signature: B512 = tx_witness_data(witness_index).unwrap();
 
         let init = Initialization::new(
             String::from_ascii_str("ZapWalletInitialize"),
-            op.evm_addr,
+            owner_address,
             utxoid,
         );
         let encoded_hash = Initialization::encode(init);
-        let recovered_signer: b256 = match ec_recover_evm_address(compactsig, encoded_hash) {
+        let recovered_signer: b256 = match ec_recover_evm_address(compact_signature, encoded_hash) {
             Ok(signer) => signer.into(),
             Err(_) => {
                 // return false for a any error in signature recovery

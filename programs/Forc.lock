@@ -9,7 +9,7 @@ dependencies = ["std"]
 
 [[package]]
 name = "io_utils"
-source = "path+from-root-AF27CE1FBCCCEC7C"
+source = "path+from-root-B2FDB073770A0553"
 dependencies = [
     "std",
     "zap_utils",
@@ -31,8 +31,11 @@ dependencies = [
 name = "master_utils"
 source = "path+from-root-B2FDB073770A0553"
 dependencies = [
+    "io_utils",
     "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
     "std",
+    "walletop_contract_call",
+    "walletop_upgrade",
     "zap_utils",
     "zapwallet_consts",
 ]
@@ -183,8 +186,35 @@ dependencies = [
     "module07_utils",
     "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
     "std",
+    "walletop_contract_call",
     "zap_utils",
     "zapwallet_consts",
+]
+
+[[package]]
+name = "v1_manager_abi"
+source = "path+from-root-B15D36EEC8A488B1"
+dependencies = [
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
+    "std",
+]
+
+[[package]]
+name = "walletop_contract_call"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = [
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
+    "std",
+    "zap_utils",
+    "zapwallet_consts",
+]
+
+[[package]]
+name = "walletop_upgrade"
+source = "path+from-root-B2FDB073770A0553"
+dependencies = [
+    "std",
+    "zap_utils",
 ]
 
 [[package]]
@@ -195,6 +225,8 @@ dependencies = [
     "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.3#6ffb53d649b9799acda6d03c3ed82706daaafe7d",
     "std",
     "sway_libs",
+    "v1_manager_abi",
+    "walletop_upgrade",
     "zap_utils",
     "zapwallet_consts",
 ]
